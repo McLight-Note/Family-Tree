@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Family Tree — Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0c0a;
+      --surface: #1a1713;
+      --border: #2e2a24;
+      --gold: #c9a84c;
+      --gold-light: #e8c97a;
+      --text: #f0ebe2;
+      --muted: #7a7060;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Background decorative lines */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(201,168,76,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(201,168,76,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+    }
+
+    .login-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 440px;
+      padding: 20px;
+    }
+
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 48px 44px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .login-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .logo-icon {
+      font-size: 32px;
+      display: block;
+      margin-bottom: 12px;
+    }
+
+    .logo h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 26px;
+      font-weight: 400;
+      color: var(--gold-light);
+      letter-spacing: 0.02em;
+    }
+
+    .logo p {
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-top: 6px;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .divider span {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .divider em {
+      font-style: normal;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    label {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .field {
+      margin-bottom: 20px;
+    }
+
+    input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 12px 16px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--gold);
+    }
+
+    input::placeholder { color: var(--muted); }
+
+    .btn {
+      width: 100%;
+      padding: 13px;
+      background: var(--gold);
+      color: #0e0c0a;
+      border: none;
+      border-radius: 3px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn:hover { background: var(--gold-light); }
+    .btn:active { transform: scale(0.99); }
+
+    .error-msg {
+      background: rgba(220,60,60,0.12);
+      border: 1px solid rgba(220,60,60,0.3);
+      color: #f08080;
+      font-size: 13px;
+      padding: 10px 14px;
+      border-radius: 3px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .loader {
+      display: none;
+      text-align: center;
+      padding: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="logo">
+      <span class="logo-icon">🌳</span>
+      <h1>Family Tree</h1>
+      <p>Heritage &amp; Legacy</p>
+    </div>
+
+    <div class="divider"><span></span><em>Sign In</em><span></span></div>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="field">
+      <label for="email">Email</label>
+      <input type="email" id="email" placeholder="you@example.com" />
+    </div>
+
+    <div class="field">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="••••••••" />
+    </div>
+
+    <button class="btn" onclick="doLogin()">Enter</button>
+    <div class="loader" id="loader">Signing in…</div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  // ⚠️ REPLACE WITH YOUR FIREBASE CONFIG
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  window._auth = auth;
+
+  // Already logged in → redirect
+  onAuthStateChanged(auth, user => {
+    if (user) window.location.href = 'tree.html';
+  });
+
+  window.doLogin = async () => {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const errorMsg = document.getElementById('errorMsg');
+    const loader = document.getElementById('loader');
+    const btn = document.querySelector('.btn');
+
+    errorMsg.style.display = 'none';
+    btn.style.display = 'none';
+    loader.style.display = 'block';
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      window.location.href = 'tree.html';
+    } catch (e) {
+      errorMsg.textContent = 'Invalid email or password.';
+      errorMsg.style.display = 'block';
+      btn.style.display = 'block';
+      loader.style.display = 'none';
+    }
+  };
+
+  // Enter key
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') window.doLogin?.();
+  });
+</script>
+
+</body>
+</html>

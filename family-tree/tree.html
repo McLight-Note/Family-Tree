@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Family Tree</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0c0a;
+      --surface: #1a1713;
+      --surface2: #231f18;
+      --border: #2e2a24;
+      --gold: #c9a84c;
+      --gold-light: #e8c97a;
+      --text: #f0ebe2;
+      --muted: #7a7060;
+      --danger: #c0392b;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Top Bar ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 56px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      position: relative;
+      z-index: 100;
+    }
+
+    .header-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      color: var(--gold-light);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .hbtn {
+      padding: 7px 16px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .hbtn:hover { border-color: var(--gold); color: var(--gold); }
+
+    .hbtn.primary {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: #0e0c0a;
+      font-weight: 500;
+    }
+
+    .hbtn.primary:hover { background: var(--gold-light); }
+
+    .user-badge {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .admin-dot {
+      width: 6px; height: 6px;
+      background: var(--gold);
+      border-radius: 50%;
+    }
+
+    /* ── Canvas ── */
+    #canvas-wrap {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      cursor: grab;
+    }
+
+    #canvas-wrap.grabbing { cursor: grabbing; }
+
+    #canvas {
+      position: absolute;
+      top: 0; left: 0;
+      transform-origin: 0 0;
+    }
+
+    /* SVG connections */
+    #svg-lines {
+      position: absolute;
+      top: 0; left: 0;
+      pointer-events: none;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    /* ── Node Card ── */
+    .node {
+      position: absolute;
+      width: 150px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px 12px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      user-select: none;
+    }
+
+    .node:hover {
+      border-color: var(--gold);
+      box-shadow: 0 0 20px rgba(201,168,76,0.15);
+    }
+
+    .node.root-node {
+      border-color: var(--gold);
+      box-shadow: 0 0 30px rgba(201,168,76,0.2);
+    }
+
+    .node-avatar {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--border);
+      margin: 0 auto 10px;
+      display: block;
+      background: var(--surface2);
+    }
+
+    .node-avatar-placeholder {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      margin: 0 auto 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    .node-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 14px;
+      color: var(--text);
+      margin-bottom: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .node-relation {
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+
+    .node-birth {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .node-add-btn {
+      margin-top: 10px;
+      width: 100%;
+      padding: 5px;
+      border: 1px dashed var(--border);
+      background: transparent;
+      border-radius: 3px;
+      color: var(--muted);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: none; /* shown only for admin */
+    }
+
+    .node-add-btn:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    body.is-admin .node-add-btn { display: block; }
+
+    /* ── Zoom Controls ── */
+    .zoom-controls {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 50;
+    }
+
+    .zbtn {
+      width: 36px; height: 36px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.2s;
+    }
+
+    .zbtn:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      width: 100%;
+      max-width: 420px;
+      margin: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .modal::before {
+      content: '';
+      display: block;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+
+    .modal-header {
+      padding: 20px 24px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      color: var(--gold-light);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 20px;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .modal-close:hover { color: var(--text); }
+
+    .modal-body {
+      padding: 20px 24px 24px;
+    }
+
+    .mfield {
+      margin-bottom: 16px;
+    }
+
+    .mfield label {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 7px;
+    }
+
+    .mfield input, .mfield select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 10px 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .mfield input:focus, .mfield select:focus { border-color: var(--gold); }
+
+    .mfield select option { background: var(--surface); }
+
+    .avatar-preview {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--border);
+      display: block;
+      margin: 0 auto 12px;
+      background: var(--bg);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .modal-actions .hbtn { flex: 1; justify-content: center; }
+
+    .hbtn.danger {
+      color: #e07070;
+      border-color: rgba(200,60,60,0.3);
+    }
+
+    .hbtn.danger:hover {
+      background: rgba(200,60,60,0.15);
+      border-color: rgba(200,60,60,0.6);
+      color: #f08080;
+    }
+
+    /* ── Member View Modal ── */
+    .view-avatar {
+      width: 90px; height: 90px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--gold);
+      display: block;
+      margin: 0 auto 14px;
+      background: var(--surface2);
+    }
+
+    .view-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      text-align: center;
+      color: var(--gold-light);
+      margin-bottom: 4px;
+    }
+
+    .view-relation {
+      text-align: center;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 16px;
+    }
+
+    .view-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: var(--bg);
+      border-radius: 4px;
+      padding: 14px;
+    }
+
+    .view-info-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+
+    .view-info-row span:first-child { color: var(--muted); }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--surface);
+      border: 1px solid var(--gold);
+      color: var(--gold-light);
+      padding: 10px 20px;
+      border-radius: 3px;
+      font-size: 13px;
+      opacity: 0;
+      transition: all 0.3s;
+      pointer-events: none;
+      z-index: 300;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Admin Panel ── */
+    .admin-modal .modal-body { max-height: 60vh; overflow-y: auto; }
+
+    .user-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .user-row:last-child { border: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-logo">🌳 <span>Family Tree</span></div>
+  <div class="header-actions">
+    <div class="user-badge">
+      <div class="admin-dot" id="adminDot" style="display:none"></div>
+      <span id="userEmail">—</span>
+    </div>
+    <button class="hbtn admin-only" id="manageUsersBtn" style="display:none" onclick="openAdminPanel()">Manage Users</button>
+    <button class="hbtn" onclick="doLogout()">Sign Out</button>
+  </div>
+</header>
+
+<div id="canvas-wrap">
+  <div id="canvas">
+    <svg id="svg-lines"></svg>
+  </div>
+</div>
+
+<div class="zoom-controls">
+  <button class="zbtn" onclick="zoom(0.15)">+</button>
+  <button class="zbtn" onclick="zoom(-0.15)">−</button>
+  <button class="zbtn" style="font-size:12px" onclick="resetView()">⌂</button>
+</div>
+
+<!-- Add/Edit Member Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="editModalTitle">Add Member</div>
+      <button class="modal-close" onclick="closeModal('editModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <img class="avatar-preview" id="avatarPreview" src="" alt="">
+      <div class="mfield">
+        <label>Photo URL (optional)</label>
+        <input type="url" id="fPhotoUrl" placeholder="https://..." oninput="previewAvatar(this.value)">
+      </div>
+      <div class="mfield">
+        <label>Full Name *</label>
+        <input type="text" id="fName" placeholder="First Last">
+      </div>
+      <div class="mfield">
+        <label>Relation</label>
+        <select id="fRelation">
+          <option value="Me">Me</option>
+          <option value="Father">Father</option>
+          <option value="Mother">Mother</option>
+          <option value="Son">Son</option>
+          <option value="Daughter">Daughter</option>
+          <option value="Brother">Brother</option>
+          <option value="Sister">Sister</option>
+          <option value="Grandfather">Grandfather</option>
+          <option value="Grandmother">Grandmother</option>
+          <option value="Uncle">Uncle</option>
+          <option value="Aunt">Aunt</option>
+          <option value="Cousin">Cousin</option>
+          <option value="Spouse">Spouse</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="mfield">
+        <label>Birth Year</label>
+        <input type="number" id="fBirth" placeholder="e.g. 1990" min="1900" max="2025">
+      </div>
+      <div class="mfield">
+        <label>Notes</label>
+        <input type="text" id="fNotes" placeholder="Short note…">
+      </div>
+      <div class="modal-actions">
+        <button class="hbtn danger" id="deleteBtn" onclick="deleteMember()" style="display:none">Delete</button>
+        <button class="hbtn primary" onclick="saveMember()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- View Member Modal -->
+<div class="modal-overlay" id="viewModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Member</div>
+      <button class="modal-close" onclick="closeModal('viewModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <img class="view-avatar" id="vAvatar" src="" alt="">
+      <div class="view-name" id="vName"></div>
+      <div class="view-relation" id="vRelation"></div>
+      <div class="view-info">
+        <div class="view-info-row"><span>Born</span><span id="vBirth">—</span></div>
+        <div class="view-info-row"><span>Notes</span><span id="vNotes">—</span></div>
+      </div>
+      <div class="modal-actions" style="margin-top:16px">
+        <button class="hbtn admin-only primary" id="editFromViewBtn" onclick="editFromView()">Edit</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Admin Panel Modal -->
+<div class="modal-overlay admin-modal" id="adminModal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <div class="modal-title">Manage Users</div>
+      <button class="modal-close" onclick="closeModal('adminModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <h3 style="font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:14px">Create New User</h3>
+      <div class="mfield">
+        <label>Email</label>
+        <input type="email" id="newUserEmail" placeholder="user@example.com">
+      </div>
+      <div class="mfield">
+        <label>Password</label>
+        <input type="password" id="newUserPassword" placeholder="Min 6 characters">
+      </div>
+      <button class="hbtn primary" style="width:100%;margin-bottom:24px" onclick="createUser()">Create User</button>
+      <h3 style="font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Existing Users</h3>
+      <div id="userList">Loading…</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // ⚠️ REPLACE WITH YOUR FIREBASE CONFIG
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // ── State ──
+  let currentUser = null;
+  let isAdmin = false;
+  let members = {}; // { id: {name, relation, birth, notes, photoUrl, x, y, parentId} }
+  let scale = 1;
+  let panX = 0, panY = 0;
+  let isPanning = false;
+  let panStart = { x: 0, y: 0 };
+  let editingId = null;
+  let parentForNew = null;
+  let viewingMember = null;
+
+  const ADMIN_EMAIL = "REPLACE_WITH_YOUR_EMAIL@example.com"; // ⚠️ set your admin email
+
+  // ── Auth ──
+  onAuthStateChanged(auth, async user => {
+    if (!user) { window.location.href = 'index.html'; return; }
+    currentUser = user;
+    isAdmin = user.email === ADMIN_EMAIL;
+
+    document.getElementById('userEmail').textContent = user.email;
+    if (isAdmin) {
+      document.body.classList.add('is-admin');
+      document.getElementById('adminDot').style.display = 'block';
+      document.getElementById('manageUsersBtn').style.display = 'block';
+      document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
+    }
+
+    loadTree();
+  });
+
+  window.doLogout = async () => {
+    await signOut(auth);
+    window.location.href = 'index.html';
+  };
+
+  // ── Tree Load ──
+  function loadTree() {
+    const q = collection(db, 'members');
+    onSnapshot(q, snap => {
+      members = {};
+      snap.forEach(d => { members[d.id] = d.data(); });
+      renderTree();
+    });
+  }
+
+  // ── Render ──
+  function renderTree() {
+    const canvas = document.getElementById('canvas');
+    // Remove old nodes (keep SVG)
+    canvas.querySelectorAll('.node').forEach(n => n.remove());
+
+    const svg = document.getElementById('svg-lines');
+    svg.innerHTML = '';
+
+    Object.entries(members).forEach(([id, m]) => {
+      const el = document.createElement('div');
+      el.className = 'node' + (m.relation === 'Me' ? ' root-node' : '');
+      el.dataset.id = id;
+      el.style.left = (m.x || 300) + 'px';
+      el.style.top = (m.y || 300) + 'px';
+
+      let avatarHtml = '';
+      if (m.photoUrl) {
+        avatarHtml = `<img class="node-avatar" src="${m.photoUrl}" alt="" onerror="this.style.display='none'">`;
+      } else {
+        const initials = (m.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+        avatarHtml = `<div class="node-avatar-placeholder">${initials}</div>`;
+      }
+
+      el.innerHTML = `
+        ${avatarHtml}
+        <div class="node-name">${m.name || '—'}</div>
+        <div class="node-relation">${m.relation || ''}</div>
+        ${m.birth ? `<div class="node-birth">${m.birth}</div>` : ''}
+        <button class="node-add-btn" onclick="openAddChild(event,'${id}')">+ Add relative</button>
+      `;
+
+      el.addEventListener('click', (e) => {
+        if (e.target.classList.contains('node-add-btn')) return;
+        openViewModal(id);
+      });
+
+      // Make draggable for admin
+      if (isAdmin) makeDraggable(el, id);
+
+      canvas.appendChild(el);
+    });
+
+    // Draw connections
+    Object.entries(members).forEach(([id, m]) => {
+      if (m.parentId && members[m.parentId]) {
+        drawLine(m.parentId, id);
+      }
+    });
+
+    updateTransform();
+  }
+
+  function drawLine(fromId, toId) {
+    const svg = document.getElementById('svg-lines');
+    const fromEl = document.querySelector(`.node[data-id="${fromId}"]`);
+    const toEl = document.querySelector(`.node[data-id="${toId}"]`);
+    if (!fromEl || !toEl) return;
+
+    const fromM = members[fromId];
+    const toM = members[toId];
+
+    const x1 = (fromM.x || 300) + 75;
+    const y1 = (fromM.y || 300) + 140;
+    const x2 = (toM.x || 300) + 75;
+    const y2 = (toM.y || 300);
+    const cy = (y1 + y2) / 2;
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M ${x1} ${y1} C ${x1} ${cy}, ${x2} ${cy}, ${x2} ${y2}`);
+    path.setAttribute('stroke', '#2e2a24');
+    path.setAttribute('stroke-width', '1.5');
+    path.setAttribute('fill', 'none');
+    svg.appendChild(path);
+  }
+
+  // ── Drag nodes ──
+  function makeDraggable(el, id) {
+    let dragging = false;
+    let startX, startY, startLeft, startTop;
+
+    el.addEventListener('mousedown', e => {
+      if (e.target.tagName === 'BUTTON') return;
+      e.stopPropagation();
+      dragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      startLeft = members[id].x || 300;
+      startTop = members[id].y || 300;
+      el.style.zIndex = 10;
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const dx = (e.clientX - startX) / scale;
+      const dy = (e.clientY - startY) / scale;
+      const nx = startLeft + dx;
+      const ny = startTop + dy;
+      el.style.left = nx + 'px';
+      el.style.top = ny + 'px';
+      members[id].x = nx;
+      members[id].y = ny;
+      // Redraw lines on the fly
+      renderLines();
+    });
+
+    document.addEventListener('mouseup', async e => {
+      if (!dragging) return;
+      dragging = false;
+      el.style.zIndex = '';
+      // Save position
+      await setDoc(doc(db, 'members', id), { x: members[id].x, y: members[id].y }, { merge: true });
+    });
+  }
+
+  function renderLines() {
+    const svg = document.getElementById('svg-lines');
+    svg.innerHTML = '';
+    Object.entries(members).forEach(([id, m]) => {
+      if (m.parentId && members[m.parentId]) drawLine(m.parentId, id);
+    });
+  }
+
+  // ── Pan & Zoom ──
+  const wrap = document.getElementById('canvas-wrap');
+
+  wrap.addEventListener('mousedown', e => {
+    if (e.target.closest('.node')) return;
+    isPanning = true;
+    panStart = { x: e.clientX - panX, y: e.clientY - panY };
+    wrap.classList.add('grabbing');
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!isPanning) return;
+    panX = e.clientX - panStart.x;
+    panY = e.clientY - panStart.y;
+    updateTransform();
+  });
+
+  document.addEventListener('mouseup', () => {
+    isPanning = false;
+    wrap.classList.remove('grabbing');
+  });
+
+  wrap.addEventListener('wheel', e => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.08 : 0.08;
+    zoom(delta, e.clientX, e.clientY);
+  }, { passive: false });
+
+  window.zoom = (delta, cx, cy) => {
+    const rect = wrap.getBoundingClientRect();
+    const ox = (cx ?? rect.width / 2) - rect.left;
+    const oy = (cy ?? rect.height / 2) - rect.top;
+    const ns = Math.min(Math.max(scale + delta, 0.2), 3);
+    panX = ox - (ox - panX) * (ns / scale);
+    panY = oy - (oy - panY) * (ns / scale);
+    scale = ns;
+    updateTransform();
+  };
+
+  window.resetView = () => {
+    scale = 1; panX = 100; panY = 80;
+    updateTransform();
+  };
+
+  function updateTransform() {
+    document.getElementById('canvas').style.transform = `translate(${panX}px,${panY}px) scale(${scale})`;
+  }
+
+  // ── Modals ──
+  window.closeModal = id => document.getElementById(id).classList.remove('open');
+
+  window.openAddChild = (e, parentId) => {
+    e.stopPropagation();
+    parentForNew = parentId;
+    editingId = null;
+    document.getElementById('editModalTitle').textContent = 'Add Relative';
+    document.getElementById('fName').value = '';
+    document.getElementById('fRelation').value = 'Son';
+    document.getElementById('fBirth').value = '';
+    document.getElementById('fNotes').value = '';
+    document.getElementById('fPhotoUrl').value = '';
+    document.getElementById('avatarPreview').src = '';
+    document.getElementById('deleteBtn').style.display = 'none';
+    document.getElementById('editModal').classList.add('open');
+  };
+
+  window.openAddRoot = () => {
+    parentForNew = null;
+    editingId = null;
+    document.getElementById('editModalTitle').textContent = 'Add Member';
+    document.getElementById('fName').value = '';
+    document.getElementById('fRelation').value = 'Me';
+    document.getElementById('fBirth').value = '';
+    document.getElementById('fNotes').value = '';
+    document.getElementById('fPhotoUrl').value = '';
+    document.getElementById('avatarPreview').src = '';
+    document.getElementById('deleteBtn').style.display = 'none';
+    document.getElementById('editModal').classList.add('open');
+  };
+
+  window.previewAvatar = url => {
+    document.getElementById('avatarPreview').src = url || '';
+  };
+
+  window.saveMember = async () => {
+    const name = document.getElementById('fName').value.trim();
+    if (!name) { showToast('Name is required'); return; }
+
+    const parentM = parentForNew ? members[parentForNew] : null;
+    const offsetX = parentM ? (parentM.x || 300) + Math.random() * 200 - 100 : 400;
+    const offsetY = parentM ? (parentM.y || 300) + 200 : 300;
+
+    const data = {
+      name,
+      relation: document.getElementById('fRelation').value,
+      birth: document.getElementById('fBirth').value,
+      notes: document.getElementById('fNotes').value.trim(),
+      photoUrl: document.getElementById('fPhotoUrl').value.trim(),
+      parentId: parentForNew || null,
+    };
+
+    if (editingId) {
+      // Keep existing position
+      await setDoc(doc(db, 'members', editingId), data, { merge: true });
+      showToast('Member updated');
+    } else {
+      data.x = offsetX;
+      data.y = offsetY;
+      const newDoc = doc(collection(db, 'members'));
+      await setDoc(newDoc, data);
+      showToast('Member added');
+    }
+
+    closeModal('editModal');
+  };
+
+  window.deleteMember = async () => {
+    if (!editingId) return;
+    if (!confirm('Delete this member?')) return;
+    await deleteDoc(doc(db, 'members', editingId));
+    closeModal('editModal');
+    showToast('Member deleted');
+  };
+
+  // View modal
+  window.openViewModal = id => {
+    const m = members[id];
+    if (!m) return;
+    viewingMember = id;
+    const av = document.getElementById('vAvatar');
+    av.src = m.photoUrl || '';
+    av.style.display = m.photoUrl ? 'block' : 'none';
+    document.getElementById('vName').textContent = m.name || '—';
+    document.getElementById('vRelation').textContent = m.relation || '';
+    document.getElementById('vBirth').textContent = m.birth || '—';
+    document.getElementById('vNotes').textContent = m.notes || '—';
+    if (isAdmin) document.getElementById('editFromViewBtn').style.display = 'block';
+    document.getElementById('viewModal').classList.add('open');
+  };
+
+  window.editFromView = () => {
+    closeModal('viewModal');
+    const m = members[viewingMember];
+    editingId = viewingMember;
+    parentForNew = m.parentId;
+    document.getElementById('editModalTitle').textContent = 'Edit Member';
+    document.getElementById('fName').value = m.name || '';
+    document.getElementById('fRelation').value = m.relation || 'Other';
+    document.getElementById('fBirth').value = m.birth || '';
+    document.getElementById('fNotes').value = m.notes || '';
+    document.getElementById('fPhotoUrl').value = m.photoUrl || '';
+    document.getElementById('avatarPreview').src = m.photoUrl || '';
+    document.getElementById('deleteBtn').style.display = 'block';
+    document.getElementById('editModal').classList.add('open');
+  };
+
+  // ── Admin Panel ──
+  window.openAdminPanel = async () => {
+    document.getElementById('adminModal').classList.add('open');
+    const list = document.getElementById('userList');
+    list.innerHTML = 'Loading…';
+    try {
+      const snap = await getDocs(collection(db, 'users'));
+      if (snap.empty) { list.innerHTML = '<p style="color:var(--muted);font-size:13px">No users yet.</p>'; return; }
+      list.innerHTML = '';
+      snap.forEach(d => {
+        const u = d.data();
+        const row = document.createElement('div');
+        row.className = 'user-row';
+        row.innerHTML = `<span>${u.email}</span><span style="color:var(--muted);font-size:11px">${u.createdAt || ''}</span>`;
+        list.appendChild(row);
+      });
+    } catch(e) {
+      list.innerHTML = '<p style="color:var(--muted);font-size:13px">Could not load users.</p>';
+    }
+  };
+
+  window.createUser = async () => {
+    const email = document.getElementById('newUserEmail').value.trim();
+    const password = document.getElementById('newUserPassword').value;
+    if (!email || !password) { showToast('Fill in email and password'); return; }
+
+    try {
+      // Create via Firebase Auth REST API so we don't sign out current admin
+      const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, returnSecureToken: false })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+
+      // Store in Firestore
+      await setDoc(doc(db, 'users', data.localId), {
+        email,
+        createdAt: new Date().toLocaleDateString()
+      });
+
+      document.getElementById('newUserEmail').value = '';
+      document.getElementById('newUserPassword').value = '';
+      showToast(`User ${email} created!`);
+      openAdminPanel();
+    } catch(e) {
+      showToast('Error: ' + e.message);
+    }
+  };
+
+  // ── Toast ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+  window.showToast = showToast;
+
+  // ── Init ──
+  resetView();
+
+  // If no members, show add button hint for admin
+  setTimeout(() => {
+    if (isAdmin && Object.keys(members).length === 0) {
+      showToast('Click "Add Member" to start your tree!');
+    }
+  }, 2000);
+</script>
+
+<!-- Floating Add Button for Admin -->
+<button class="hbtn primary admin-only" onclick="openAddRoot()"
+  style="position:fixed;bottom:28px;left:28px;z-index:50;display:none;padding:10px 20px">
+  + Add Member
+</button>
+
+</body>
+</html>

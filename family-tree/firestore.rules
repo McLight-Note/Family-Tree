@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Members: anyone logged in can read, only admin can write
+    match /members/{memberId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.email == "REPLACE_WITH_YOUR_EMAIL@example.com";
+    }
+
+    // Users list: only admin can read/write
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.token.email == "REPLACE_WITH_YOUR_EMAIL@example.com";
+    }
+  }
+}
