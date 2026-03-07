@@ -1,1003 +1,851 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Family Tree</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Family Tree</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #0a0814;
+  --surface: #110e20;
+  --card: #18142e;
+  --card-hover: #1f1a38;
+  --border: #2d2650;
+  --accent: #a78bfa;
+  --accent2: #f472b6;
+  --gold: #fbbf24;
+  --text: #ede9ff;
+  --muted: #7066a0;
+  --male-border: #3b82f6;
+  --male-bg: linear-gradient(135deg,#1e3a8a,#3b82f6);
+  --female-border: #ec4899;
+  --female-bg: linear-gradient(135deg,#9d174d,#f472b6);
+  --other-border: #8b5cf6;
+  --other-bg: linear-gradient(135deg,#4c1d95,#a78bfa);
+  --child-clr: #818cf8;
+  --couple-clr: #f472b6;
+  --shadow: 0 8px 32px rgba(0,0,0,.55);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;font-family:'Lato',sans-serif;background:var(--bg);color:var(--text);}
 
-    :root {
-      --bg: #0e0c0a;
-      --surface: #1a1713;
-      --surface2: #231f18;
-      --border: #2e2a24;
-      --gold: #c9a84c;
-      --gold-light: #e8c97a;
-      --text: #f0ebe2;
-      --muted: #7a7060;
-      --danger: #c0392b;
-    }
+/* ── TOP BAR ── */
+#topbar{
+  position:fixed;top:0;left:0;right:0;height:56px;
+  background:linear-gradient(90deg,#110e20f0,#0a0814f0);
+  border-bottom:1px solid var(--border);
+  backdrop-filter:blur(16px);
+  display:flex;align-items:center;padding:0 16px;gap:8px;z-index:200;
+}
+#topbar h1{
+  font-family:'Playfair Display',serif;font-size:1.1rem;
+  color:var(--accent);letter-spacing:.5px;margin-right:8px;white-space:nowrap;
+}
+.tb-sep{width:1px;height:28px;background:var(--border);margin:0 2px;}
+.tb-btn{
+  background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--muted);
+  padding:5px 11px;border-radius:8px;cursor:pointer;font-size:.74rem;
+  font-family:'Lato',sans-serif;transition:all .18s;white-space:nowrap;
+  display:flex;align-items:center;gap:5px;
+}
+.tb-btn:hover{background:var(--border);color:var(--text);}
+.tb-btn.active{background:rgba(167,139,250,.15);border-color:var(--accent);color:var(--accent);}
+.tb-btn.red:hover{border-color:#f87171;color:#f87171;}
+.tb-btn.pink:hover{border-color:var(--couple-clr);color:var(--couple-clr);}
+#tb-spacer{flex:1;}
+#user-badge{font-size:.7rem;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--border);padding:4px 10px;border-radius:20px;}
+#admin-badge{font-size:.65rem;background:linear-gradient(90deg,#7c3aed,#be185d);color:#fff;padding:3px 8px;border-radius:20px;font-weight:700;letter-spacing:.5px;}
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'DM Sans', sans-serif;
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
+/* ── CANVAS WRAP ── */
+#wrap{
+  position:fixed;top:56px;left:0;right:0;bottom:0;
+  overflow:hidden;cursor:grab;
+}
+#wrap.grabbing{cursor:grabbing;}
+#wrap::before{
+  content:'';position:fixed;inset:56px 0 0;
+  background-image:radial-gradient(circle,#2d265055 1px,transparent 1px);
+  background-size:38px 38px;pointer-events:none;z-index:0;
+}
 
-    /* ── Top Bar ── */
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 24px;
-      height: 56px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-      position: relative;
-      z-index: 100;
-    }
+/* ── CANVAS & SVG ── */
+#canvas{position:absolute;width:5000px;height:4000px;transform-origin:0 0;}
+#svg-layer{position:absolute;top:0;left:0;width:5000px;height:4000px;pointer-events:none;z-index:1;transform-origin:0 0;}
 
-    .header-logo {
-      font-family: 'Playfair Display', serif;
-      font-size: 18px;
-      color: var(--gold-light);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+/* ── PERSON CARD ── */
+.pcard{
+  position:absolute;width:155px;
+  background:var(--card);
+  border:2px solid var(--border);
+  border-radius:16px;padding:14px 12px 10px;
+  cursor:grab;z-index:10;
+  transition:box-shadow .2s,border-color .2s,background .2s;
+  box-shadow:0 4px 18px rgba(0,0,0,.4);
+}
+.pcard:hover{background:var(--card-hover);z-index:20;box-shadow:0 8px 32px rgba(167,139,250,.18);}
+.pcard.male  {border-color:var(--male-border);}
+.pcard.female{border-color:var(--female-border);}
+.pcard.other {border-color:var(--other-border);}
+.pcard.coupled{
+  box-shadow:0 0 0 2px var(--couple-clr),0 8px 30px rgba(244,114,182,.25);
+}
+.pcard.selected{
+  border-color:var(--gold)!important;
+  box-shadow:0 0 0 3px rgba(251,191,36,.35),0 8px 30px rgba(0,0,0,.5)!important;
+  z-index:30;
+}
 
-    .header-actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
+/* avatar */
+.av{
+  width:54px;height:54px;border-radius:50%;
+  margin:0 auto 8px;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;
+  border:2px solid rgba(255,255,255,.1);
+}
+.av img{width:100%;height:100%;object-fit:cover;}
+.av.m{background:var(--male-bg);color:#fff;}
+.av.f{background:var(--female-bg);color:#fff;}
+.av.o{background:var(--other-bg);color:#fff;}
+.cname{font-size:.8rem;font-weight:700;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.crel {font-size:.66rem;text-align:center;color:var(--muted);margin-top:2px;}
+.cyear{font-size:.62rem;text-align:center;color:var(--muted);margin-top:1px;}
 
-    .hbtn {
-      padding: 7px 16px;
-      border-radius: 3px;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--text);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 12px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
+/* heart badge for coupled */
+.hbadge{
+  position:absolute;top:-11px;right:-11px;
+  font-size:1rem;line-height:1;
+  filter:drop-shadow(0 0 5px var(--couple-clr));
+  animation:hb 1.6s ease-in-out infinite;
+  pointer-events:none;user-select:none;
+}
+@keyframes hb{0%,100%{transform:scale(1);}50%{transform:scale(1.25);}}
 
-    .hbtn:hover { border-color: var(--gold); color: var(--gold); }
+/* actions */
+.cacts{display:flex;gap:4px;margin-top:8px;justify-content:center;flex-wrap:wrap;}
+.cbtn{
+  background:rgba(255,255,255,.05);border:1px solid var(--border);
+  color:var(--muted);padding:3px 8px;border-radius:6px;font-size:.62rem;
+  cursor:pointer;transition:all .15s;font-family:'Lato',sans-serif;
+}
+.cbtn:hover{background:var(--border);color:var(--text);}
+.cbtn.del:hover{border-color:#f87171;color:#f87171;}
 
-    .hbtn.primary {
-      background: var(--gold);
-      border-color: var(--gold);
-      color: #0e0c0a;
-      font-weight: 500;
-    }
+/* ── SVG LINES ── */
+.lchild {stroke:var(--child-clr);stroke-width:2.2;fill:none;}
+.lcouple{stroke:var(--couple-clr);stroke-width:2.5;stroke-dasharray:7 4;fill:none;}
+.lhit   {stroke:transparent;stroke-width:14;fill:none;cursor:pointer;}
 
-    .hbtn.primary:hover { background: var(--gold-light); }
+/* ── MODE BANNER ── */
+#mode-banner{
+  position:fixed;top:66px;left:50%;transform:translateX(-50%);
+  background:linear-gradient(90deg,#5b21b6,#be185d);
+  color:#fff;padding:5px 22px;border-radius:20px;
+  font-size:.72rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  z-index:300;pointer-events:none;
+  opacity:0;transition:opacity .3s;
+  white-space:nowrap;
+}
+#mode-banner.show{opacity:1;}
 
-    .user-badge {
-      font-size: 12px;
-      color: var(--muted);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
+/* ── TEMP DRAW LINE ── */
+#draw-svg{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:250;
+}
 
-    .admin-dot {
-      width: 6px; height: 6px;
-      background: var(--gold);
-      border-radius: 50%;
-    }
+/* ── ZOOM CONTROLS ── */
+#zoom-bar{
+  position:fixed;bottom:22px;right:22px;
+  display:flex;flex-direction:column;gap:6px;z-index:200;
+}
+.zbtn{
+  width:36px;height:36px;background:var(--card);
+  border:1px solid var(--border);color:var(--text);
+  border-radius:9px;font-size:1rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .18s;
+}
+.zbtn:hover{background:var(--border);color:var(--accent);}
 
-    /* ── Canvas ── */
-    #canvas-wrap {
-      flex: 1;
-      position: relative;
-      overflow: hidden;
-      cursor: grab;
-    }
+/* ── LEGEND ── */
+#legend{
+  position:fixed;bottom:22px;left:22px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:12px 15px;font-size:.68rem;
+  color:var(--muted);z-index:200;line-height:1.8;
+}
+.ll{display:inline-block;width:22px;height:2px;vertical-align:middle;margin-right:5px;}
+.lld{border-top:2px dashed var(--couple-clr);height:0;}
 
-    #canvas-wrap.grabbing { cursor: grabbing; }
+/* ── MODALS ── */
+.overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.72);
+  z-index:400;display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(6px);
+}
+.mbox{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:18px;padding:30px;width:100%;max-width:380px;
+  max-height:92vh;overflow-y:auto;
+  box-shadow:0 24px 64px rgba(0,0,0,.8);
+}
+.mbox h2{
+  font-family:'Playfair Display',serif;
+  color:var(--accent);margin-bottom:18px;font-size:1.05rem;
+}
+.frow{margin-bottom:13px;}
+.frow label{display:block;font-size:.7rem;color:var(--muted);margin-bottom:4px;letter-spacing:.5px;}
+.frow input,.frow select,.frow textarea{
+  width:100%;background:rgba(255,255,255,.04);
+  border:1px solid var(--border);color:var(--text);
+  padding:9px 12px;border-radius:9px;font-size:.84rem;
+  font-family:'Lato',sans-serif;outline:none;transition:border-color .2s,box-shadow .2s;
+}
+.frow input:focus,.frow select:focus,.frow textarea:focus{
+  border-color:var(--accent);box-shadow:0 0 0 3px rgba(167,139,250,.12);
+}
+.frow input::placeholder,.frow textarea::placeholder{color:#2d2650;}
+.frow textarea{resize:vertical;min-height:64px;}
+.frow select option{background:var(--card);}
+.mbtns{display:flex;gap:10px;margin-top:18px;}
+.mprimary{
+  flex:1;background:linear-gradient(135deg,#6d28d9,#c084fc);
+  border:none;color:#fff;padding:10px;border-radius:9px;
+  font-weight:700;font-size:.85rem;cursor:pointer;
+  font-family:'Lato',sans-serif;transition:opacity .2s;
+}
+.mprimary:hover{opacity:.85;}
+.mcancel{
+  flex:1;background:var(--card);border:1px solid var(--border);
+  color:var(--muted);padding:10px;border-radius:9px;font-size:.85rem;
+  cursor:pointer;font-family:'Lato',sans-serif;transition:all .2s;
+}
+.mcancel:hover{border-color:#f87171;color:#f87171;}
 
-    #canvas {
-      position: absolute;
-      top: 0; left: 0;
-      transform-origin: 0 0;
-    }
+/* detail modal content */
+.detail-av{
+  width:80px;height:80px;border-radius:50%;margin:0 auto 14px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;
+  overflow:hidden;
+}
+.drow{margin:7px 0;font-size:.83rem;}
+.drow b{color:var(--muted);margin-right:6px;}
 
-    /* SVG connections */
-    #svg-lines {
-      position: absolute;
-      top: 0; left: 0;
-      pointer-events: none;
-      width: 100%;
-      height: 100%;
-      overflow: visible;
-    }
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(12px);
+  background:var(--card);border:1px solid var(--accent);
+  color:var(--text);padding:9px 18px;border-radius:10px;
+  font-size:.8rem;z-index:500;opacity:0;
+  transition:all .3s;pointer-events:none;white-space:nowrap;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
-    /* ── Node Card ── */
-    .node {
-      position: absolute;
-      width: 150px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 16px 12px 12px;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color 0.2s, box-shadow 0.2s;
-      user-select: none;
-    }
+/* ── MANAGE USERS (admin) ── */
+#users-panel .mbox{max-width:460px;}
+.urow{
+  display:flex;align-items:center;gap:10px;padding:9px 0;
+  border-bottom:1px solid var(--border);font-size:.82rem;
+}
+.urow:last-child{border:none;}
+.uemail{flex:1;color:var(--muted);}
+.ubadge{font-size:.65rem;padding:2px 7px;border-radius:10px;background:rgba(167,139,250,.15);color:var(--accent);}
 
-    .node:hover {
-      border-color: var(--gold);
-      box-shadow: 0 0 20px rgba(201,168,76,0.15);
-    }
-
-    .node.root-node {
-      border-color: var(--gold);
-      box-shadow: 0 0 30px rgba(201,168,76,0.2);
-    }
-
-    .node-avatar {
-      width: 64px; height: 64px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 2px solid var(--border);
-      margin: 0 auto 10px;
-      display: block;
-      background: var(--surface2);
-    }
-
-    .node-avatar-placeholder {
-      width: 64px; height: 64px;
-      border-radius: 50%;
-      background: var(--surface2);
-      border: 2px solid var(--border);
-      margin: 0 auto 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-    }
-
-    .node-name {
-      font-family: 'Playfair Display', serif;
-      font-size: 14px;
-      color: var(--text);
-      margin-bottom: 3px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .node-relation {
-      font-size: 10px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--gold);
-    }
-
-    .node-birth {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 4px;
-    }
-
-    .node-add-btn {
-      margin-top: 10px;
-      width: 100%;
-      padding: 5px;
-      border: 1px dashed var(--border);
-      background: transparent;
-      border-radius: 3px;
-      color: var(--muted);
-      font-size: 11px;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: none; /* shown only for admin */
-    }
-
-    .node-add-btn:hover {
-      border-color: var(--gold);
-      color: var(--gold);
-    }
-
-    body.is-admin .node-add-btn { display: block; }
-
-    /* ── Zoom Controls ── */
-    .zoom-controls {
-      position: fixed;
-      bottom: 28px;
-      right: 28px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      z-index: 50;
-    }
-
-    .zbtn {
-      width: 36px; height: 36px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 3px;
-      color: var(--text);
-      font-size: 18px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: border-color 0.2s;
-    }
-
-    .zbtn:hover { border-color: var(--gold); color: var(--gold); }
-
-    /* ── Modal ── */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.7);
-      backdrop-filter: blur(4px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 200;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s;
-    }
-
-    .modal-overlay.open {
-      opacity: 1;
-      pointer-events: all;
-    }
-
-    .modal {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      width: 100%;
-      max-width: 420px;
-      margin: 20px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .modal::before {
-      content: '';
-      display: block;
-      height: 3px;
-      background: linear-gradient(90deg, transparent, var(--gold), transparent);
-    }
-
-    .modal-header {
-      padding: 20px 24px 0;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .modal-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 18px;
-      color: var(--gold-light);
-    }
-
-    .modal-close {
-      background: none;
-      border: none;
-      color: var(--muted);
-      font-size: 20px;
-      cursor: pointer;
-      line-height: 1;
-    }
-
-    .modal-close:hover { color: var(--text); }
-
-    .modal-body {
-      padding: 20px 24px 24px;
-    }
-
-    .mfield {
-      margin-bottom: 16px;
-    }
-
-    .mfield label {
-      display: block;
-      font-size: 11px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 7px;
-    }
-
-    .mfield input, .mfield select {
-      width: 100%;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 3px;
-      padding: 10px 14px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      color: var(--text);
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .mfield input:focus, .mfield select:focus { border-color: var(--gold); }
-
-    .mfield select option { background: var(--surface); }
-
-    .avatar-preview {
-      width: 80px; height: 80px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 2px solid var(--border);
-      display: block;
-      margin: 0 auto 12px;
-      background: var(--bg);
-    }
-
-    .modal-actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 4px;
-    }
-
-    .modal-actions .hbtn { flex: 1; justify-content: center; }
-
-    .hbtn.danger {
-      color: #e07070;
-      border-color: rgba(200,60,60,0.3);
-    }
-
-    .hbtn.danger:hover {
-      background: rgba(200,60,60,0.15);
-      border-color: rgba(200,60,60,0.6);
-      color: #f08080;
-    }
-
-    /* ── Member View Modal ── */
-    .view-avatar {
-      width: 90px; height: 90px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 2px solid var(--gold);
-      display: block;
-      margin: 0 auto 14px;
-      background: var(--surface2);
-    }
-
-    .view-name {
-      font-family: 'Playfair Display', serif;
-      font-size: 22px;
-      text-align: center;
-      color: var(--gold-light);
-      margin-bottom: 4px;
-    }
-
-    .view-relation {
-      text-align: center;
-      font-size: 11px;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--gold);
-      margin-bottom: 16px;
-    }
-
-    .view-info {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      background: var(--bg);
-      border-radius: 4px;
-      padding: 14px;
-    }
-
-    .view-info-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 13px;
-    }
-
-    .view-info-row span:first-child { color: var(--muted); }
-
-    /* ── Toast ── */
-    .toast {
-      position: fixed;
-      bottom: 80px;
-      left: 50%;
-      transform: translateX(-50%) translateY(20px);
-      background: var(--surface);
-      border: 1px solid var(--gold);
-      color: var(--gold-light);
-      padding: 10px 20px;
-      border-radius: 3px;
-      font-size: 13px;
-      opacity: 0;
-      transition: all 0.3s;
-      pointer-events: none;
-      z-index: 300;
-    }
-
-    .toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-
-    /* ── Admin Panel ── */
-    .admin-modal .modal-body { max-height: 60vh; overflow-y: auto; }
-
-    .user-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 13px;
-    }
-
-    .user-row:last-child { border: none; }
-  </style>
+scrollbar-width:thin;scrollbar-color:var(--border) var(--bg);
+</style>
 </head>
 <body>
 
-<header>
-  <div class="header-logo">🌳 <span>Family Tree</span></div>
-  <div class="header-actions">
-    <div class="user-badge">
-      <div class="admin-dot" id="adminDot" style="display:none"></div>
-      <span id="userEmail">—</span>
-    </div>
-    <button class="hbtn admin-only" id="manageUsersBtn" style="display:none" onclick="openAdminPanel()">Manage Users</button>
-    <button class="hbtn" onclick="doLogout()">Sign Out</button>
-  </div>
-</header>
+<!-- TOP BAR -->
+<div id="topbar">
+  <h1>🌳 Family Tree</h1>
+  <div class="tb-sep"></div>
 
-<div id="canvas-wrap">
-  <div id="canvas">
-    <svg id="svg-lines"></svg>
-  </div>
+  <!-- Admin-only controls -->
+  <button class="tb-btn admin-only" id="btn-add"     onclick="openAdd()">＋ Add Member</button>
+  <div class="tb-sep admin-only"></div>
+  <button class="tb-btn admin-only" id="btn-child"   onclick="startMode('child')">🔗 Child Link</button>
+  <button class="tb-btn admin-only" id="btn-couple"  onclick="startMode('couple')">💑 Couple Link</button>
+  <button class="tb-btn admin-only red" id="btn-del" onclick="startMode('dellink')">✂ Remove Link</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" onclick="resetView()">⊙ Reset</button>
+  <div class="tb-sep admin-only"></div>
+  <button class="tb-btn admin-only" onclick="openUsers()">👥 Users</button>
+
+  <span id="tb-spacer"></span>
+  <span id="admin-badge" style="display:none">ADMIN</span>
+  <span id="user-badge">—</span>
+  <button class="tb-btn red" id="btn-logout" onclick="doLogout()" style="display:none">Logout</button>
 </div>
 
-<div class="zoom-controls">
-  <button class="zbtn" onclick="zoom(0.15)">+</button>
-  <button class="zbtn" onclick="zoom(-0.15)">−</button>
-  <button class="zbtn" style="font-size:12px" onclick="resetView()">⌂</button>
+<!-- MODE BANNER -->
+<div id="mode-banner"></div>
+
+<!-- CANVAS -->
+<div id="wrap">
+  <svg id="svg-layer" xmlns="http://www.w3.org/2000/svg"></svg>
+  <div id="canvas"></div>
 </div>
 
-<!-- Add/Edit Member Modal -->
-<div class="modal-overlay" id="editModal">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="editModalTitle">Add Member</div>
-      <button class="modal-close" onclick="closeModal('editModal')">×</button>
-    </div>
-    <div class="modal-body">
-      <img class="avatar-preview" id="avatarPreview" src="" alt="">
-      <div class="mfield">
-        <label>Photo URL (optional)</label>
-        <input type="url" id="fPhotoUrl" placeholder="https://..." oninput="previewAvatar(this.value)">
-      </div>
-      <div class="mfield">
-        <label>Full Name *</label>
-        <input type="text" id="fName" placeholder="First Last">
-      </div>
-      <div class="mfield">
-        <label>Relation</label>
-        <select id="fRelation">
-          <option value="Me">Me</option>
-          <option value="Father">Father</option>
-          <option value="Mother">Mother</option>
-          <option value="Son">Son</option>
-          <option value="Daughter">Daughter</option>
-          <option value="Brother">Brother</option>
-          <option value="Sister">Sister</option>
-          <option value="Grandfather">Grandfather</option>
-          <option value="Grandmother">Grandmother</option>
-          <option value="Uncle">Uncle</option>
-          <option value="Aunt">Aunt</option>
-          <option value="Cousin">Cousin</option>
-          <option value="Spouse">Spouse</option>
-          <option value="Other">Other</option>
-        </select>
-      </div>
-      <div class="mfield">
-        <label>Birth Year</label>
-        <input type="number" id="fBirth" placeholder="e.g. 1990" min="1900" max="2025">
-      </div>
-      <div class="mfield">
-        <label>Notes</label>
-        <input type="text" id="fNotes" placeholder="Short note…">
-      </div>
-      <div class="modal-actions">
-        <button class="hbtn danger" id="deleteBtn" onclick="deleteMember()" style="display:none">Delete</button>
-        <button class="hbtn primary" onclick="saveMember()">Save</button>
-      </div>
-    </div>
+<!-- DRAW LINE (temp while connecting) -->
+<svg id="draw-svg">
+  <path id="draw-path" stroke="#fbbf24" stroke-width="2" stroke-dasharray="8 5" fill="none" opacity="0"/>
+</svg>
+
+<!-- ZOOM -->
+<div id="zoom-bar">
+  <button class="zbtn" onclick="doZoom(1.15)">＋</button>
+  <button class="zbtn" onclick="doZoom(0.87)">－</button>
+  <button class="zbtn" onclick="resetView()" title="Reset view">⊙</button>
+</div>
+
+<!-- LEGEND -->
+<div id="legend">
+  <div><span class="ll" style="background:var(--child-clr)"></span>Parent → Child</div>
+  <div><span class="ll lld"></span>Married / Couple ❤️</div>
+  <div style="margin-top:4px;font-size:.63rem;color:#3d3560">
+    🔗 Click "Child Link" → pick 2 people<br>
+    💑 Click "Couple Link" → pick 2 people<br>
+    Esc to cancel any mode
   </div>
 </div>
 
-<!-- View Member Modal -->
-<div class="modal-overlay" id="viewModal">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">Member</div>
-      <button class="modal-close" onclick="closeModal('viewModal')">×</button>
+<!-- ADD / EDIT MODAL -->
+<div id="modal" class="overlay" style="display:none">
+  <div class="mbox">
+    <h2 id="modal-title">Add Member</h2>
+    <div class="frow"><label>Name *</label><input id="f-name" placeholder="Full name"/></div>
+    <div class="frow">
+      <label>Gender</label>
+      <select id="f-gender">
+        <option value="male">Male 👨</option>
+        <option value="female">Female 👩</option>
+        <option value="other">Other / Unknown</option>
+      </select>
     </div>
-    <div class="modal-body">
-      <img class="view-avatar" id="vAvatar" src="" alt="">
-      <div class="view-name" id="vName"></div>
-      <div class="view-relation" id="vRelation"></div>
-      <div class="view-info">
-        <div class="view-info-row"><span>Born</span><span id="vBirth">—</span></div>
-        <div class="view-info-row"><span>Notes</span><span id="vNotes">—</span></div>
-      </div>
-      <div class="modal-actions" style="margin-top:16px">
-        <button class="hbtn admin-only primary" id="editFromViewBtn" onclick="editFromView()">Edit</button>
-      </div>
+    <div class="frow"><label>Relation (e.g. Father, Aunt…)</label><input id="f-rel" placeholder="Relation"/></div>
+    <div class="frow"><label>Birth Year</label><input id="f-birth" type="number" placeholder="1975"/></div>
+    <div class="frow"><label>Photo URL (optional)</label><input id="f-photo" placeholder="https://…"/></div>
+    <div class="frow"><label>Notes</label><textarea id="f-notes" placeholder="Any notes…"></textarea></div>
+    <div class="mbtns">
+      <button class="mprimary" onclick="saveModal()">💾 Save</button>
+      <button class="mcancel"  onclick="closeModal()">Cancel</button>
     </div>
   </div>
 </div>
 
-<!-- Admin Panel Modal -->
-<div class="modal-overlay admin-modal" id="adminModal">
-  <div class="modal" style="max-width:500px">
-    <div class="modal-header">
-      <div class="modal-title">Manage Users</div>
-      <button class="modal-close" onclick="closeModal('adminModal')">×</button>
+<!-- DETAIL / VIEW MODAL -->
+<div id="detail-modal" class="overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+  <div class="mbox" id="detail-box"></div>
+</div>
+
+<!-- MANAGE USERS MODAL (admin only) -->
+<div id="users-panel" class="overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+  <div class="mbox" id="users-box">
+    <h2>👥 Manage Users</h2>
+    <div class="frow"><label>New user email</label><input id="nu-email" placeholder="family@example.com"/></div>
+    <div class="frow"><label>Temporary password</label><input id="nu-pass" type="password" placeholder="min 6 chars"/></div>
+    <div class="mbtns" style="margin-bottom:18px">
+      <button class="mprimary" onclick="createUser()">＋ Create Account</button>
+      <button class="mcancel"  onclick="document.getElementById('users-panel').style.display='none'">Close</button>
     </div>
-    <div class="modal-body">
-      <h3 style="font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:14px">Create New User</h3>
-      <div class="mfield">
-        <label>Email</label>
-        <input type="email" id="newUserEmail" placeholder="user@example.com">
-      </div>
-      <div class="mfield">
-        <label>Password</label>
-        <input type="password" id="newUserPassword" placeholder="Min 6 characters">
-      </div>
-      <button class="hbtn primary" style="width:100%;margin-bottom:24px" onclick="createUser()">Create User</button>
-      <h3 style="font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Existing Users</h3>
-      <div id="userList">Loading…</div>
-    </div>
+    <div id="users-list"></div>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div id="toast"></div>
 
-<!-- Firebase -->
+<!-- ═══════════════════════ FIREBASE + APP LOGIC ═══════════════════════ -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword }
-    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query }
-    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { initializeApp }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, doc, onSnapshot,
+         setDoc, deleteDoc, updateDoc, getDocs }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyCo3tfrTjggIuLvt7oigI6ly_qHYGQlcsY",
-    authDomain: "family-tree-cafc6.firebaseapp.com",
-    projectId: "family-tree-cafc6",
-    storageBucket: "family-tree-cafc6.firebasestorage.app",
-    messagingSenderId: "105629851742",
-    appId: "1:105629851742:web:c00a5719d0bc230ed694cf"
-  };
+// ╔══════════════════════════════════════════════════╗
+// ║  STEP 1 — PASTE YOUR FIREBASE CONFIG BELOW      ║
+// ╚══════════════════════════════════════════════════╝
+const firebaseConfig = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID"
+};
+// ╔══════════════════════════════════════════════════╗
+// ║  STEP 2 — SET YOUR ADMIN EMAIL BELOW            ║
+// ╚══════════════════════════════════════════════════╝
+const ADMIN_EMAIL = "REPLACE_WITH_YOUR_EMAIL@example.com";
+// ═══════════════════════════════════════════════════
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
 
-  // ── State ──
-  let currentUser = null;
-  let isAdmin = false;
-  let members = {}; // { id: {name, relation, birth, notes, photoUrl, x, y, parentId} }
-  let scale = 1;
-  let panX = 0, panY = 0;
-  let isPanning = false;
-  let panStart = { x: 0, y: 0 };
-  let editingId = null;
-  let parentForNew = null;
-  let viewingMember = null;
+// ── STATE ──────────────────────────────────────────
+let currentUser = null;
+let isAdmin     = false;
+let people      = {};       // id → data
+let conns       = {};       // id → { from, to, type }
+let scale = 1, panX = 0, panY = 0;
+let isPanning = false, panStart = {};
+let dragging = null, dragOff = {};
+let moved = false;
+let mode = null;            // 'child' | 'couple' | 'dellink'
+let modeFirst = null;
+let editId = null;
 
-  const ADMIN_EMAIL = "muhammadd@gachon.ac.kr";
+// ── AUTH ───────────────────────────────────────────
+onAuthStateChanged(auth, user => {
+  if (!user) { window.location.href = 'index.html'; return; }
+  currentUser = user;
+  isAdmin = user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  document.getElementById('user-badge').textContent = user.email;
+  document.getElementById('btn-logout').style.display = '';
+  if (isAdmin) document.getElementById('admin-badge').style.display = '';
+  document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
+  listenData();
+});
 
-  // ── Auth ──
-  onAuthStateChanged(auth, async user => {
-    if (!user) { window.location.href = 'index.html'; return; }
-    currentUser = user;
-    isAdmin = user.email === ADMIN_EMAIL;
+window.doLogout = () => signOut(auth);
 
-    document.getElementById('userEmail').textContent = user.email;
-    if (isAdmin) {
-      document.body.classList.add('is-admin');
-      document.getElementById('adminDot').style.display = 'block';
-      document.getElementById('manageUsersBtn').style.display = 'block';
-      document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
+// ── FIRESTORE LISTENERS ────────────────────────────
+function listenData() {
+  onSnapshot(collection(db, 'people'), snap => {
+    snap.docChanges().forEach(ch => {
+      if (ch.type === 'removed') delete people[ch.doc.id];
+      else people[ch.doc.id] = ch.doc.data();
+    });
+    renderAll();
+  });
+  onSnapshot(collection(db, 'connections'), snap => {
+    snap.docChanges().forEach(ch => {
+      if (ch.type === 'removed') delete conns[ch.doc.id];
+      else conns[ch.doc.id] = ch.doc.data();
+    });
+    renderAll();
+  });
+}
+
+async function savePerson(id, data)     { await setDoc(doc(db,'people',id), data); }
+async function removePerson(id)         { await deleteDoc(doc(db,'people',id)); }
+async function saveConn(id, data)       { await setDoc(doc(db,'connections',id), data); }
+async function removeConn(id)           { await deleteDoc(doc(db,'connections',id)); }
+async function updatePos(id, x, y)     { await updateDoc(doc(db,'people',id),{x,y}).catch(()=>{}); }
+
+// ── RENDER ─────────────────────────────────────────
+function coupleSet() {
+  const s = new Set();
+  Object.values(conns).forEach(c => { if(c.type==='couple'){s.add(c.from);s.add(c.to);} });
+  return s;
+}
+
+function renderAll() {
+  renderCards();
+  renderLines();
+}
+
+function renderCards() {
+  const canvas = document.getElementById('canvas');
+  canvas.querySelectorAll('.pcard').forEach(el => el.remove());
+  const cs = coupleSet();
+
+  Object.entries(people).forEach(([id, p]) => {
+    const card = document.createElement('div');
+    const gClass = p.gender === 'female' ? 'female' : p.gender === 'other' ? 'other' : 'male';
+    card.className = 'pcard ' + gClass + (cs.has(id) ? ' coupled' : '');
+    card.id = 'card-' + id;
+    card.style.left = (p.x ?? 300) + 'px';
+    card.style.top  = (p.y ?? 300) + 'px';
+
+    // Heart badge for coupled
+    if (cs.has(id)) {
+      const hb = document.createElement('div');
+      hb.className = 'hbadge'; hb.textContent = '❤️';
+      card.appendChild(hb);
     }
 
-    loadTree();
-  });
-
-  window.doLogout = async () => {
-    await signOut(auth);
-    window.location.href = 'index.html';
-  };
-
-  // ── Tree Load ──
-  function loadTree() {
-    const q = collection(db, 'members');
-    onSnapshot(q, snap => {
-      members = {};
-      snap.forEach(d => { members[d.id] = d.data(); });
-      renderTree();
-    });
-  }
-
-  // ── Render ──
-  function renderTree() {
-    const canvas = document.getElementById('canvas');
-    // Remove old nodes (keep SVG)
-    canvas.querySelectorAll('.node').forEach(n => n.remove());
-
-    const svg = document.getElementById('svg-lines');
-    svg.innerHTML = '';
-
-    Object.entries(members).forEach(([id, m]) => {
-      const el = document.createElement('div');
-      el.className = 'node' + (m.relation === 'Me' ? ' root-node' : '');
-      el.dataset.id = id;
-      el.style.left = (m.x || 300) + 'px';
-      el.style.top = (m.y || 300) + 'px';
-
-      let avatarHtml = '';
-      if (m.photoUrl) {
-        avatarHtml = `<img class="node-avatar" src="${m.photoUrl}" alt="" onerror="this.style.display='none'">`;
-      } else {
-        const initials = (m.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
-        avatarHtml = `<div class="node-avatar-placeholder">${initials}</div>`;
-      }
-
-      el.innerHTML = `
-        ${avatarHtml}
-        <div class="node-name">${m.name || '—'}</div>
-        <div class="node-relation">${m.relation || ''}</div>
-        ${m.birth ? `<div class="node-birth">${m.birth}</div>` : ''}
-        <button class="node-add-btn" onclick="openAddChild(event,'${id}')">+ Add relative</button>
-      `;
-
-      el.addEventListener('click', (e) => {
-        if (e.target.classList.contains('node-add-btn')) return;
-        openViewModal(id);
-      });
-
-      // Make draggable for admin
-      if (isAdmin) makeDraggable(el, id);
-
-      canvas.appendChild(el);
-    });
-
-    // Draw connections
-    Object.entries(members).forEach(([id, m]) => {
-      if (m.parentId && members[m.parentId]) {
-        drawLine(m.parentId, id);
-      }
-    });
-
-    updateTransform();
-  }
-
-  function drawLine(fromId, toId) {
-    const svg = document.getElementById('svg-lines');
-    const fromEl = document.querySelector(`.node[data-id="${fromId}"]`);
-    const toEl = document.querySelector(`.node[data-id="${toId}"]`);
-    if (!fromEl || !toEl) return;
-
-    const fromM = members[fromId];
-    const toM = members[toId];
-
-    const x1 = (fromM.x || 300) + 75;
-    const y1 = (fromM.y || 300) + 140;
-    const x2 = (toM.x || 300) + 75;
-    const y2 = (toM.y || 300);
-    const cy = (y1 + y2) / 2;
-
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', `M ${x1} ${y1} C ${x1} ${cy}, ${x2} ${cy}, ${x2} ${y2}`);
-    path.setAttribute('stroke', '#2e2a24');
-    path.setAttribute('stroke-width', '1.5');
-    path.setAttribute('fill', 'none');
-    svg.appendChild(path);
-  }
-
-  // ── Drag nodes ──
-  function makeDraggable(el, id) {
-    let dragging = false;
-    let startX, startY, startLeft, startTop;
-
-    el.addEventListener('mousedown', e => {
-      if (e.target.tagName === 'BUTTON') return;
-      e.stopPropagation();
-      dragging = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      startLeft = members[id].x || 300;
-      startTop = members[id].y || 300;
-      el.style.zIndex = 10;
-    });
-
-    document.addEventListener('mousemove', e => {
-      if (!dragging) return;
-      const dx = (e.clientX - startX) / scale;
-      const dy = (e.clientY - startY) / scale;
-      const nx = startLeft + dx;
-      const ny = startTop + dy;
-      el.style.left = nx + 'px';
-      el.style.top = ny + 'px';
-      members[id].x = nx;
-      members[id].y = ny;
-      // Redraw lines on the fly
-      renderLines();
-    });
-
-    document.addEventListener('mouseup', async e => {
-      if (!dragging) return;
-      dragging = false;
-      el.style.zIndex = '';
-      // Save position
-      await setDoc(doc(db, 'members', id), { x: members[id].x, y: members[id].y }, { merge: true });
-    });
-  }
-
-  function renderLines() {
-    const svg = document.getElementById('svg-lines');
-    svg.innerHTML = '';
-    Object.entries(members).forEach(([id, m]) => {
-      if (m.parentId && members[m.parentId]) drawLine(m.parentId, id);
-    });
-  }
-
-  // ── Pan & Zoom ──
-  const wrap = document.getElementById('canvas-wrap');
-
-  wrap.addEventListener('mousedown', e => {
-    if (e.target.closest('.node')) return;
-    isPanning = true;
-    panStart = { x: e.clientX - panX, y: e.clientY - panY };
-    wrap.classList.add('grabbing');
-  });
-
-  document.addEventListener('mousemove', e => {
-    if (!isPanning) return;
-    panX = e.clientX - panStart.x;
-    panY = e.clientY - panStart.y;
-    updateTransform();
-  });
-
-  document.addEventListener('mouseup', () => {
-    isPanning = false;
-    wrap.classList.remove('grabbing');
-  });
-
-  wrap.addEventListener('wheel', e => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.08 : 0.08;
-    zoom(delta, e.clientX, e.clientY);
-  }, { passive: false });
-
-  window.zoom = (delta, cx, cy) => {
-    const rect = wrap.getBoundingClientRect();
-    const ox = (cx ?? rect.width / 2) - rect.left;
-    const oy = (cy ?? rect.height / 2) - rect.top;
-    const ns = Math.min(Math.max(scale + delta, 0.2), 3);
-    panX = ox - (ox - panX) * (ns / scale);
-    panY = oy - (oy - panY) * (ns / scale);
-    scale = ns;
-    updateTransform();
-  };
-
-  window.resetView = () => {
-    scale = 1; panX = 100; panY = 80;
-    updateTransform();
-  };
-
-  function updateTransform() {
-    document.getElementById('canvas').style.transform = `translate(${panX}px,${panY}px) scale(${scale})`;
-  }
-
-  // ── Modals ──
-  window.closeModal = id => document.getElementById(id).classList.remove('open');
-
-  window.openAddChild = (e, parentId) => {
-    e.stopPropagation();
-    parentForNew = parentId;
-    editingId = null;
-    document.getElementById('editModalTitle').textContent = 'Add Relative';
-    document.getElementById('fName').value = '';
-    document.getElementById('fRelation').value = 'Son';
-    document.getElementById('fBirth').value = '';
-    document.getElementById('fNotes').value = '';
-    document.getElementById('fPhotoUrl').value = '';
-    document.getElementById('avatarPreview').src = '';
-    document.getElementById('deleteBtn').style.display = 'none';
-    document.getElementById('editModal').classList.add('open');
-  };
-
-  window.openAddRoot = () => {
-    parentForNew = null;
-    editingId = null;
-    document.getElementById('editModalTitle').textContent = 'Add Member';
-    document.getElementById('fName').value = '';
-    document.getElementById('fRelation').value = 'Me';
-    document.getElementById('fBirth').value = '';
-    document.getElementById('fNotes').value = '';
-    document.getElementById('fPhotoUrl').value = '';
-    document.getElementById('avatarPreview').src = '';
-    document.getElementById('deleteBtn').style.display = 'none';
-    document.getElementById('editModal').classList.add('open');
-  };
-
-  window.previewAvatar = url => {
-    document.getElementById('avatarPreview').src = url || '';
-  };
-
-  window.saveMember = async () => {
-    const name = document.getElementById('fName').value.trim();
-    if (!name) { showToast('Name is required'); return; }
-
-    const parentM = parentForNew ? members[parentForNew] : null;
-    const offsetX = parentM ? (parentM.x || 300) + Math.random() * 200 - 100 : 400;
-    const offsetY = parentM ? (parentM.y || 300) + 200 : 300;
-
-    const data = {
-      name,
-      relation: document.getElementById('fRelation').value,
-      birth: document.getElementById('fBirth').value,
-      notes: document.getElementById('fNotes').value.trim(),
-      photoUrl: document.getElementById('fPhotoUrl').value.trim(),
-      parentId: parentForNew || null,
-    };
-
-    if (editingId) {
-      // Keep existing position
-      await setDoc(doc(db, 'members', editingId), data, { merge: true });
-      showToast('Member updated');
+    // Avatar
+    const avCls = p.gender === 'female' ? 'f' : p.gender === 'other' ? 'o' : 'm';
+    const av = document.createElement('div');
+    av.className = 'av ' + avCls;
+    if (p.photo) {
+      av.innerHTML = `<img src="${escH(p.photo)}" onerror="this.parentElement.textContent='${escH(p.name[0]||'?')}'"/>`;
     } else {
-      data.x = offsetX;
-      data.y = offsetY;
-      const newDoc = doc(collection(db, 'members'));
-      await setDoc(newDoc, data);
-      showToast('Member added');
+      av.textContent = (p.name || '?')[0].toUpperCase();
     }
+    card.appendChild(av);
 
-    closeModal('editModal');
-  };
+    const nm = el('div','cname',escH(p.name||''));
+    card.appendChild(nm);
+    if (p.relation) card.appendChild(el('div','crel',escH(p.relation)));
+    if (p.birth)    card.appendChild(el('div','cyear','b. '+p.birth));
 
-  window.deleteMember = async () => {
-    if (!editingId) return;
-    if (!confirm('Delete this member?')) return;
-    await deleteDoc(doc(db, 'members', editingId));
-    closeModal('editModal');
-    showToast('Member deleted');
-  };
-
-  // View modal
-  window.openViewModal = id => {
-    const m = members[id];
-    if (!m) return;
-    viewingMember = id;
-    const av = document.getElementById('vAvatar');
-    av.src = m.photoUrl || '';
-    av.style.display = m.photoUrl ? 'block' : 'none';
-    document.getElementById('vName').textContent = m.name || '—';
-    document.getElementById('vRelation').textContent = m.relation || '';
-    document.getElementById('vBirth').textContent = m.birth || '—';
-    document.getElementById('vNotes').textContent = m.notes || '—';
-    if (isAdmin) document.getElementById('editFromViewBtn').style.display = 'block';
-    document.getElementById('viewModal').classList.add('open');
-  };
-
-  window.editFromView = () => {
-    closeModal('viewModal');
-    const m = members[viewingMember];
-    editingId = viewingMember;
-    parentForNew = m.parentId;
-    document.getElementById('editModalTitle').textContent = 'Edit Member';
-    document.getElementById('fName').value = m.name || '';
-    document.getElementById('fRelation').value = m.relation || 'Other';
-    document.getElementById('fBirth').value = m.birth || '';
-    document.getElementById('fNotes').value = m.notes || '';
-    document.getElementById('fPhotoUrl').value = m.photoUrl || '';
-    document.getElementById('avatarPreview').src = m.photoUrl || '';
-    document.getElementById('deleteBtn').style.display = 'block';
-    document.getElementById('editModal').classList.add('open');
-  };
-
-  // ── Admin Panel ──
-  window.openAdminPanel = async () => {
-    document.getElementById('adminModal').classList.add('open');
-    const list = document.getElementById('userList');
-    list.innerHTML = 'Loading…';
-    try {
-      const snap = await getDocs(collection(db, 'users'));
-      if (snap.empty) { list.innerHTML = '<p style="color:var(--muted);font-size:13px">No users yet.</p>'; return; }
-      list.innerHTML = '';
-      snap.forEach(d => {
-        const u = d.data();
-        const row = document.createElement('div');
-        row.className = 'user-row';
-        row.innerHTML = `<span>${u.email}</span><span style="color:var(--muted);font-size:11px">${u.createdAt || ''}</span>`;
-        list.appendChild(row);
-      });
-    } catch(e) {
-      list.innerHTML = '<p style="color:var(--muted);font-size:13px">Could not load users.</p>';
+    // Buttons
+    const acts = document.createElement('div');
+    acts.className = 'cacts';
+    if (isAdmin) {
+      acts.innerHTML = `
+        <button class="cbtn" onclick="openEdit('${id}')">✏️</button>
+        <button class="cbtn del" onclick="confirmDel('${id}')">🗑</button>
+        <button class="cbtn" onclick="openDetail('${id}')">👁</button>
+      `;
+    } else {
+      acts.innerHTML = `<button class="cbtn" onclick="openDetail('${id}')">👁 View</button>`;
     }
-  };
+    card.appendChild(acts);
 
-  window.createUser = async () => {
-    const email = document.getElementById('newUserEmail').value.trim();
-    const password = document.getElementById('newUserPassword').value;
-    if (!email || !password) { showToast('Fill in email and password'); return; }
+    // Events
+    card.addEventListener('mousedown', e => startDrag(e, id, card));
+    card.addEventListener('click',     e => onCardClick(e, id));
 
-    try {
-      // Create via Firebase Auth REST API so we don't sign out current admin
-      const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, returnSecureToken: false })
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error.message);
+    canvas.appendChild(card);
+  });
+}
 
-      // Store in Firestore
-      await setDoc(doc(db, 'users', data.localId), {
-        email,
-        createdAt: new Date().toLocaleDateString()
-      });
+function el(tag, cls, html) {
+  const d = document.createElement(tag);
+  d.className = cls;
+  d.innerHTML = html;
+  return d;
+}
+function escH(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-      document.getElementById('newUserEmail').value = '';
-      document.getElementById('newUserPassword').value = '';
-      showToast(`User ${email} created!`);
-      openAdminPanel();
-    } catch(e) {
-      showToast('Error: ' + e.message);
+// ── SVG LINES ──────────────────────────────────────
+function cardCenter(id) {
+  const p = people[id];
+  if (!p) return null;
+  return { x: (p.x??300)+77, y: (p.y??300)+72 };
+}
+
+function renderLines() {
+  const svg = document.getElementById('svg-layer');
+  svg.innerHTML = `
+    <defs>
+      <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="var(--child-clr)"/>
+      </marker>
+      <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="3.5" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+  `;
+
+  Object.entries(conns).forEach(([cid, c]) => {
+    const a = cardCenter(c.from), b = cardCenter(c.to);
+    if (!a || !b) return;
+
+    const mx = (a.x+b.x)/2, my = (a.y+b.y)/2;
+    const isCouple = c.type === 'couple';
+
+    // Hit area (invisible, wide, for click-to-delete)
+    const hit = document.createElementNS('http://www.w3.org/2000/svg','path');
+    hit.setAttribute('class','lhit');
+
+    // Visible path
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('class', isCouple ? 'lcouple' : 'lchild');
+
+    let d;
+    if (isCouple) {
+      const cy = Math.min(a.y,b.y) - 40;
+      d = `M${a.x},${a.y} C${a.x},${cy} ${b.x},${cy} ${b.x},${b.y}`;
+      path.setAttribute('filter','url(#glow)');
+
+      // Heart label
+      const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+      txt.setAttribute('x',mx); txt.setAttribute('y',cy-4);
+      txt.setAttribute('text-anchor','middle'); txt.setAttribute('font-size','18');
+      txt.setAttribute('fill','var(--couple-clr)'); txt.setAttribute('filter','url(#glow)');
+      txt.textContent = '❤';
+      svg.appendChild(txt);
+    } else {
+      d = `M${a.x},${a.y} C${a.x},${my} ${b.x},${my} ${b.x},${b.y}`;
+      path.setAttribute('marker-end','url(#arr)');
     }
-  };
+    path.setAttribute('d', d);
+    hit.setAttribute('d', d);
 
-  // ── Toast ──
-  function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2800);
+    if (isAdmin) {
+      hit.style.pointerEvents = 'stroke';
+      hit.addEventListener('click', e => {
+        if (mode === 'dellink') {
+          e.stopPropagation();
+          removeConn(cid);
+          showToast('Link removed');
+          endMode();
+        }
+      });
+      svg.appendChild(hit);
+    }
+    svg.appendChild(path);
+  });
+}
+
+// ── CONNECT MODE ───────────────────────────────────
+window.startMode = type => {
+  mode = type; modeFirst = null;
+  document.body.classList.add('connect-mode');
+  const b = document.getElementById('mode-banner');
+  b.textContent = type === 'dellink' ? 'CLICK A LINE TO REMOVE IT — ESC TO CANCEL'
+                : type === 'couple'  ? 'SELECT FIRST PARTNER — ESC TO CANCEL'
+                :                      'SELECT PARENT — ESC TO CANCEL';
+  b.classList.add('show');
+
+  // Highlight active button
+  ['btn-child','btn-couple','btn-del'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
+  const map = {child:'btn-child',couple:'btn-couple',dellink:'btn-del'};
+  document.getElementById(map[type])?.classList.add('active');
+
+  showToast(type==='dellink' ? 'Click any line to remove it'
+          : type==='couple'  ? 'Click first partner, then second'
+          : 'Click parent, then click child');
+};
+
+function endMode() {
+  mode = null; modeFirst = null;
+  document.body.classList.remove('connect-mode');
+  document.getElementById('mode-banner').classList.remove('show');
+  document.querySelectorAll('.pcard.selected').forEach(c => c.classList.remove('selected'));
+  ['btn-child','btn-couple','btn-del'].forEach(id => document.getElementById(id)?.classList.remove('active'));
+}
+
+function onCardClick(e, id) {
+  if (moved) return;
+  if (!mode || mode === 'dellink') return;
+  e.stopPropagation();
+
+  if (!modeFirst) {
+    modeFirst = id;
+    document.getElementById('card-'+id)?.classList.add('selected');
+    document.getElementById('mode-banner').textContent =
+      mode === 'couple' ? 'NOW SELECT SECOND PARTNER — ESC TO CANCEL'
+                        : 'NOW SELECT CHILD — ESC TO CANCEL';
+    showToast('First selected — now click second person');
+  } else if (modeFirst !== id) {
+    // Check duplicate
+    const dup = Object.values(conns).some(c =>
+      c.type === mode &&
+      ((c.from===modeFirst&&c.to===id)||(c.from===id&&c.to===modeFirst))
+    );
+    if (dup) { showToast('⚠️ That link already exists'); endMode(); return; }
+
+    saveConn('conn_'+Date.now(), { from:modeFirst, to:id, type:mode });
+    showToast(mode==='couple' ? '❤️ Couple linked!' : '🔗 Parent-child link added!');
+    endMode();
   }
-  window.showToast = showToast;
+}
 
-  // ── Init ──
-  resetView();
+document.addEventListener('keydown', e => { if(e.key==='Escape') endMode(); });
 
-  // If no members, show add button hint for admin
-  setTimeout(() => {
-    if (isAdmin && Object.keys(members).length === 0) {
-      showToast('Click "Add Member" to start your tree!');
-    }
-  }, 2000);
+// ── DRAGGING CARDS ─────────────────────────────────
+function startDrag(e, id, card) {
+  if (mode) return;
+  if (e.button !== 0) return;
+  e.stopPropagation();
+  dragging = { id, card };
+  moved = false;
+  dragOff = {
+    mx: e.clientX, my: e.clientY,
+    cx: parseFloat(card.style.left) || 0,
+    cy: parseFloat(card.style.top)  || 0,
+  };
+  card.style.cursor = 'grabbing';
+}
+
+document.addEventListener('mousemove', e => {
+  if (dragging) {
+    const dx = (e.clientX - dragOff.mx) / scale;
+    const dy = (e.clientY - dragOff.my) / scale;
+    if (Math.abs(dx)>3||Math.abs(dy)>3) moved = true;
+    if (!moved) return;
+    const nx = dragOff.cx + dx, ny = dragOff.cy + dy;
+    dragging.card.style.left = nx+'px';
+    dragging.card.style.top  = ny+'px';
+    people[dragging.id].x = nx;
+    people[dragging.id].y = ny;
+    renderLines();
+    return;
+  }
+  if (isPanning) {
+    panX = panStart.px + (e.clientX - panStart.mx);
+    panY = panStart.py + (e.clientY - panStart.my);
+    applyT();
+    return;
+  }
+  // Draw temp line in connect mode
+  if (mode && modeFirst && mode !== 'dellink') {
+    const c = cardCenter(modeFirst);
+    if (!c) return;
+    const wr = document.getElementById('wrap').getBoundingClientRect();
+    const tx = (e.clientX - wr.left - panX) / scale;
+    const ty = (e.clientY - wr.top  - panY) / scale;
+    const pp = document.getElementById('draw-path');
+    pp.setAttribute('d',`M${c.x},${c.y} Q${(c.x+tx)/2},${c.y} ${tx},${ty}`);
+    pp.setAttribute('opacity','0.75');
+  }
+});
+
+document.addEventListener('mouseup', e => {
+  if (dragging) {
+    dragging.card.style.cursor = 'grab';
+    if (moved) updatePos(dragging.id, people[dragging.id].x, people[dragging.id].y);
+    dragging = null;
+    setTimeout(()=>{ moved = false; }, 50);
+  }
+  if (isPanning) { isPanning = false; document.getElementById('wrap').classList.remove('grabbing'); }
+  document.getElementById('draw-path').setAttribute('opacity','0');
+});
+
+// ── PAN ────────────────────────────────────────────
+const wrap = document.getElementById('wrap');
+wrap.addEventListener('mousedown', e => {
+  if (e.button!==0) return;
+  if (mode) return;
+  const t = e.target;
+  if (t.closest('.pcard')) return;
+  isPanning = true;
+  panStart = { mx:e.clientX, my:e.clientY, px:panX, py:panY };
+  wrap.classList.add('grabbing');
+});
+wrap.addEventListener('wheel', e => {
+  e.preventDefault();
+  scale = Math.min(3, Math.max(0.18, scale * (e.deltaY>0?0.9:1.1)));
+  applyT();
+}, { passive:false });
+
+function applyT() {
+  const t = `translate(${panX}px,${panY}px) scale(${scale})`;
+  document.getElementById('canvas').style.transform = t;
+  document.getElementById('svg-layer').style.transform = t;
+}
+window.doZoom = f => { scale = Math.min(3,Math.max(0.18,scale*f)); applyT(); };
+window.resetView = () => { scale=1; panX=0; panY=0; applyT(); };
+
+// ── ADD / EDIT MODAL ───────────────────────────────
+window.openAdd = () => {
+  editId = null;
+  document.getElementById('modal-title').textContent = '＋ Add Member';
+  ['f-name','f-rel','f-birth','f-photo','f-notes'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('f-gender').value = 'male';
+  document.getElementById('modal').style.display = 'flex';
+  setTimeout(()=>document.getElementById('f-name').focus(), 100);
+};
+window.openEdit = id => {
+  const p = people[id]; if(!p) return;
+  editId = id;
+  document.getElementById('modal-title').textContent = '✏️ Edit Member';
+  document.getElementById('f-name').value  = p.name||'';
+  document.getElementById('f-gender').value= p.gender||'male';
+  document.getElementById('f-rel').value   = p.relation||'';
+  document.getElementById('f-birth').value = p.birth||'';
+  document.getElementById('f-photo').value = p.photo||'';
+  document.getElementById('f-notes').value = p.notes||'';
+  document.getElementById('modal').style.display = 'flex';
+};
+window.closeModal = () => document.getElementById('modal').style.display = 'none';
+window.saveModal  = async () => {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { showToast('⚠️ Name is required'); return; }
+  const id   = editId || 'p_'+Date.now();
+  const prev = people[id] || {};
+  const data = {
+    name,
+    gender:   document.getElementById('f-gender').value,
+    relation: document.getElementById('f-rel').value.trim(),
+    birth:    parseInt(document.getElementById('f-birth').value)||'',
+    photo:    document.getElementById('f-photo').value.trim(),
+    notes:    document.getElementById('f-notes').value.trim(),
+    x: prev.x ?? (250+Math.random()*700),
+    y: prev.y ?? (200+Math.random()*500),
+  };
+  people[id] = data;
+  await savePerson(id, data);
+  closeModal();
+  showToast(editId ? '✅ Member updated' : '✅ Member added');
+};
+
+document.addEventListener('keydown', e => {
+  if (e.key==='Enter' && document.getElementById('modal').style.display==='flex') window.saveModal();
+});
+
+// ── DELETE MEMBER ──────────────────────────────────
+window.confirmDel = id => {
+  const p = people[id];
+  if (!confirm(`Delete "${p?.name}"?\nThis will also remove all their connections.`)) return;
+  Object.entries(conns).forEach(([cid,c]) => {
+    if (c.from===id||c.to===id) removeConn(cid);
+  });
+  removePerson(id);
+  showToast('🗑 Member deleted');
+};
+
+// ── DETAIL VIEW ────────────────────────────────────
+window.openDetail = id => {
+  const p = people[id]; if(!p) return;
+  const isCoupled = Object.values(conns).some(c=>c.type==='couple'&&(c.from===id||c.to===id));
+  const avCls = p.gender==='female'?'f':p.gender==='other'?'o':'m';
+  const box = document.getElementById('detail-box');
+  box.innerHTML = `
+    <h2 style="display:flex;align-items:center;gap:8px">${isCoupled?'❤️':'👤'} ${escH(p.name)}</h2>
+    <div class="detail-av av ${avCls}" style="margin-top:14px">
+      ${p.photo ? `<img src="${escH(p.photo)}" onerror="this.parentElement.textContent='${escH((p.name||'?')[0])}'"/>` : escH((p.name||'?')[0].toUpperCase())}
+    </div>
+    <div class="drow"><b>Gender:</b>${escH(p.gender||'—')}</div>
+    <div class="drow"><b>Relation:</b>${escH(p.relation||'—')}</div>
+    <div class="drow"><b>Birth year:</b>${p.birth||'—'}</div>
+    ${p.notes ? `<div class="drow" style="white-space:pre-wrap"><b>Notes:</b>${escH(p.notes)}</div>` : ''}
+    <button class="mcancel" style="width:100%;margin-top:16px" onclick="document.getElementById('detail-modal').style.display='none'">Close</button>
+  `;
+  document.getElementById('detail-modal').style.display = 'flex';
+};
+
+// ── MANAGE USERS ───────────────────────────────────
+window.openUsers = async () => {
+  document.getElementById('users-panel').style.display = 'flex';
+  const snap = await getDocs(collection(db,'users')).catch(()=>null);
+  const list = document.getElementById('users-list');
+  list.innerHTML = '<div style="font-size:.75rem;color:var(--muted);margin-bottom:8px">Existing accounts are managed in Firebase Console → Authentication.</div>';
+};
+window.createUser = async () => {
+  const email = document.getElementById('nu-email').value.trim();
+  const pass  = document.getElementById('nu-pass').value;
+  if (!email||!pass) { showToast('⚠️ Enter email and password'); return; }
+  try {
+    // Create via secondary auth instance to avoid logging out admin
+    const { initializeApp: ia2 } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+    const { getAuth: ga2, createUserWithEmailAndPassword: cup } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+    const app2 = ia2(firebaseConfig, 'secondary-'+Date.now());
+    const auth2 = ga2(app2);
+    await cup(auth2, email, pass);
+    await auth2.signOut();
+    showToast('✅ Account created for '+email);
+    document.getElementById('nu-email').value = '';
+    document.getElementById('nu-pass').value  = '';
+  } catch(e) {
+    showToast('❌ '+e.message);
+  }
+};
+
+// ── TOAST ──────────────────────────────────────────
+window.showToast = msg => {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(()=>t.classList.remove('show'), 2800);
+};
 </script>
-
-<!-- Floating Add Button for Admin -->
-<button class="hbtn primary admin-only" onclick="openAddRoot()"
-  style="position:fixed;bottom:28px;left:28px;z-index:50;display:none;padding:10px 20px">
-  + Add Member
-</button>
-
 </body>
 </html>

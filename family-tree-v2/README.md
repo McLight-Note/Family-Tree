@@ -1,103 +1,76 @@
-# 🌳 Family Tree — Setup Guide
+# 🌳 Family Tree v3 — Setup Guide
 
-## What you get
-- Beautiful login page
-- Interactive family tree (drag nodes, zoom/pan)
-- Add members with photos, relation, birth year, notes
-- Only **you (admin)** can edit — others view only
-- Create accounts for family members from your admin panel
-- Data saved in Firebase (persists across sessions)
-
----
-
-## Step 1 — Firebase Setup
-
-1. Go to [https://console.firebase.google.com](https://console.firebase.google.com)
-2. Click **"Add project"** → give it a name (e.g. `family-tree`)
-3. Disable Google Analytics (optional) → **Create project**
-
-### Enable Authentication
-1. Go to **Build → Authentication → Get Started**
-2. Click **Email/Password** → Enable → Save
-
-### Create your admin account
-1. In Authentication → **Add user**
-2. Enter your email and a strong password
-3. This is YOUR login — the admin
-
-### Enable Firestore
-1. Go to **Build → Firestore Database → Create database**
-2. Choose **Start in production mode** → pick a region → Enable
-
-### Get your config
-1. Go to **Project Settings** (gear icon) → **General**
-2. Scroll to "Your apps" → Click **Web** (`</>` icon)
-3. Register app → copy the `firebaseConfig` object
+## What's new in v3
+- **Connection strings** — draw parent→child links between any two people
+- **Couple links** — special dashed pink line with a ❤️ floating heart connecting partners
+- **Heart badges** — coupled people get a pulsing ❤️ badge on their card + glowing border
+- **Upgraded login page** — animated starfield, floating orbs, smooth animations
+- **Better cards** — gender-colored borders, photo avatars, polished dark theme
+- **Mode banners** — clear on-screen instructions when connecting people
+- **Temp draw line** — see a preview line as you drag to connect
+- **All v2 features kept** — drag, zoom/pan, Firebase sync, admin/viewer roles
 
 ---
 
-## Step 2 — Update config in files
+## Quick Setup (same as v2)
 
+### Step 1 — Firebase
+1. Go to https://console.firebase.google.com
+2. Create a project → enable **Email/Password Auth** → enable **Firestore**
+3. Add yourself as a user in Authentication
+
+### Step 2 — Paste your config
 Open **both** `index.html` and `tree.html` and replace:
-
 ```js
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",           // ← paste yours
-  authDomain: "YOUR_PROJECT...",    // ← paste yours
-  projectId: "YOUR_PROJECT_ID",     // ← paste yours
-  storageBucket: "YOUR_PROJECT...", // ← paste yours
-  messagingSenderId: "...",         // ← paste yours
-  appId: "..."                      // ← paste yours
+  apiKey:            "YOUR_API_KEY",         // ← paste yours
+  authDomain:        "YOUR_PROJECT...",       // ← paste yours
+  projectId:         "YOUR_PROJECT_ID",       // ← paste yours
+  storageBucket:     "YOUR_PROJECT...",       // ← paste yours
+  messagingSenderId: "...",                   // ← paste yours
+  appId:             "..."                    // ← paste yours
 };
 ```
 
-Also replace in **tree.html**:
+Also replace in **tree.html** and **firestore.rules**:
 ```js
 const ADMIN_EMAIL = "REPLACE_WITH_YOUR_EMAIL@example.com";
 ```
-With your actual email (the one you created in Firebase Auth).
 
-Also update **firestore.rules** — replace the email there too.
+### Step 3 — Deploy Firestore rules
+```bash
+npm install -g firebase-tools
+firebase login
+firebase init firestore
+firebase deploy --only firestore:rules
+```
+Or paste the rules manually in Firebase Console → Firestore → Rules.
 
----
-
-## Step 3 — Deploy Firestore Rules
-
-1. Install Firebase CLI: `npm install -g firebase-tools`
-2. Login: `firebase login`
-3. In the project folder: `firebase init firestore`
-4. Deploy rules: `firebase deploy --only firestore:rules`
-
-OR paste the rules manually in Firebase Console → Firestore → Rules tab.
-
----
-
-## Step 4 — Deploy to Vercel
-
-1. Push this folder to a **GitHub repo**
-2. Go to [https://vercel.com](https://vercel.com) → New Project
-3. Import your repo → Deploy (no build settings needed for plain HTML)
-4. Your site is live! 🎉
+### Step 4 — Deploy to Vercel
+1. Push this folder to GitHub
+2. Go to vercel.com → New Project → Import repo
+3. Set **Root Directory** to `family-tree-v3` (or whatever you named this folder)
+4. Deploy — done! 🎉
 
 ---
 
-## How to use
+## How to use connections
 
-### As Admin
-- Login with your credentials
-- Click **"+ Add Member"** (bottom left) to add yourself first
-- On each node click **"+ Add relative"** to add connected members
-- Drag nodes to arrange the tree layout
-- Click any node to view details or edit
-- Use **"Manage Users"** to create accounts for family members
+### Linking parent → child
+1. Click **🔗 Child Link** in the top bar
+2. Click the **parent's card**
+3. Click the **child's card**
+→ A purple line with an arrow appears
 
-### As a viewer
-- Login with the credentials you gave them
-- They can see and explore the tree but cannot edit
+### Linking a couple
+1. Click **💑 Couple Link** in the top bar
+2. Click **first partner's card**
+3. Click **second partner's card**
+→ A dashed pink line with ❤ appears; both cards get heart badges
 
----
+### Removing a link
+1. Click **✂ Remove Link**
+2. Click any line on the canvas
+→ That connection is deleted
 
-## Tips
-- Use a square photo URL for best avatars
-- Start with yourself (relation: Me), then add parents, siblings, children
-- The tree auto-saves positions when you drag nodes
+Press **Esc** at any time to cancel the current action.
