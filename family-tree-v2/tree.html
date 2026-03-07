@@ -209,6 +209,8 @@ html,body{height:100%;overflow:hidden;font-family:'Lato',sans-serif;background:v
 .frow input::placeholder,.frow textarea::placeholder{color:#2d2650;}
 .frow textarea{resize:vertical;min-height:64px;}
 .frow select option{background:var(--card);}
+#photo-upload-area:hover{border-color:var(--accent);}
+#photo-upload-area.has-photo{border-color:var(--accent);background:rgba(167,139,250,.06);}
 .mbtns{display:flex;gap:10px;margin-top:18px;}
 .mprimary{
   flex:1;background:linear-gradient(135deg,#6d28d9,#c084fc);
@@ -328,7 +330,23 @@ scrollbar-width:thin;scrollbar-color:var(--border) var(--bg);
     </div>
     <div class="frow"><label>Relation (e.g. Father, Aunt…)</label><input id="f-rel" placeholder="Relation"/></div>
     <div class="frow"><label>Birth Year</label><input id="f-birth" type="number" placeholder="1975"/></div>
-    <div class="frow"><label>Photo URL (optional)</label><input id="f-photo" placeholder="https://…"/></div>
+    <div class="frow">
+      <label>Photo</label>
+      <!-- Upload from PC -->
+      <div id="photo-upload-area" onclick="document.getElementById('f-photo-file').click()"
+        style="border:2px dashed var(--border);border-radius:9px;padding:14px;text-align:center;cursor:pointer;transition:border-color .2s;margin-bottom:8px;position:relative;">
+        <div id="photo-preview" style="display:none;margin-bottom:8px">
+          <img id="photo-preview-img" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--accent)"/>
+        </div>
+        <div id="photo-upload-label" style="font-size:.75rem;color:var(--muted)">📁 Click to upload photo from PC</div>
+        <input type="file" id="f-photo-file" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)"/>
+      </div>
+      <!-- Or paste URL -->
+      <input id="f-photo" placeholder="Or paste image URL (https://…)" style="font-size:.76rem"/>
+      <div id="photo-clear-btn" style="display:none;margin-top:5px">
+        <button type="button" onclick="clearPhoto()" style="background:rgba(248,113,113,.1);border:1px solid #f87171;color:#f87171;padding:3px 10px;border-radius:6px;font-size:.68rem;cursor:pointer;font-family:'Lato',sans-serif;">✕ Remove photo</button>
+      </div>
+    </div>
     <div class="frow"><label>Notes</label><textarea id="f-notes" placeholder="Any notes…"></textarea></div>
     <div class="mbtns">
       <button class="mprimary" onclick="saveModal()">💾 Save</button>
@@ -734,12 +752,67 @@ function applyT() {
 window.doZoom = f => { scale = Math.min(3,Math.max(0.18,scale*f)); applyT(); };
 window.resetView = () => { scale=1; panX=0; panY=0; applyT(); };
 
+// ── PHOTO UPLOAD ───────────────────────────────────
+let photoBase64 = null;
+
+window.handlePhotoUpload = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 800 * 1024) {
+    showToast('⚠️ Image too large — please use one under 800KB');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    photoBase64 = ev.target.result; // full base64 data URL
+    document.getElementById('photo-preview-img').src = photoBase64;
+    document.getElementById('photo-preview').style.display = 'block';
+    document.getElementById('photo-upload-label').textContent = '✅ ' + file.name;
+    document.getElementById('photo-upload-area').classList.add('has-photo');
+    document.getElementById('photo-clear-btn').style.display = 'block';
+    document.getElementById('f-photo').value = ''; // clear URL field
+  };
+  reader.readAsDataURL(file);
+};
+
+window.clearPhoto = () => {
+  photoBase64 = null;
+  document.getElementById('f-photo').value = '';
+  document.getElementById('f-photo-file').value = '';
+  document.getElementById('photo-preview').style.display = 'none';
+  document.getElementById('photo-upload-label').textContent = '📁 Click to upload photo from PC';
+  document.getElementById('photo-upload-area').classList.remove('has-photo');
+  document.getElementById('photo-clear-btn').style.display = 'none';
+};
+
+function resetPhotoField(existingPhoto) {
+  photoBase64 = null;
+  document.getElementById('f-photo-file').value = '';
+  document.getElementById('photo-clear-btn').style.display = 'none';
+  document.getElementById('photo-upload-area').classList.remove('has-photo');
+  if (existingPhoto && existingPhoto.startsWith('data:')) {
+    // existing base64 photo
+    photoBase64 = existingPhoto;
+    document.getElementById('photo-preview-img').src = existingPhoto;
+    document.getElementById('photo-preview').style.display = 'block';
+    document.getElementById('photo-upload-label').textContent = '✅ Current photo';
+    document.getElementById('photo-upload-area').classList.add('has-photo');
+    document.getElementById('photo-clear-btn').style.display = 'block';
+    document.getElementById('f-photo').value = '';
+  } else {
+    document.getElementById('photo-preview').style.display = 'none';
+    document.getElementById('photo-upload-label').textContent = '📁 Click to upload photo from PC';
+    document.getElementById('f-photo').value = existingPhoto || '';
+  }
+}
+
 // ── ADD / EDIT MODAL ───────────────────────────────
 window.openAdd = () => {
   editId = null;
   document.getElementById('modal-title').textContent = '＋ Add Member';
-  ['f-name','f-rel','f-birth','f-photo','f-notes'].forEach(id => document.getElementById(id).value='');
+  ['f-name','f-rel','f-birth','f-notes'].forEach(id => document.getElementById(id).value='');
   document.getElementById('f-gender').value = 'male';
+  resetPhotoField('');
   document.getElementById('modal').style.display = 'flex';
   setTimeout(()=>document.getElementById('f-name').focus(), 100);
 };
@@ -751,8 +824,8 @@ window.openEdit = id => {
   document.getElementById('f-gender').value= p.gender||'male';
   document.getElementById('f-rel').value   = p.relation||'';
   document.getElementById('f-birth').value = p.birth||'';
-  document.getElementById('f-photo').value = p.photo||'';
   document.getElementById('f-notes').value = p.notes||'';
+  resetPhotoField(p.photo||'');
   document.getElementById('modal').style.display = 'flex';
 };
 window.closeModal = () => document.getElementById('modal').style.display = 'none';
@@ -761,12 +834,15 @@ window.saveModal  = async () => {
   if (!name) { showToast('⚠️ Name is required'); return; }
   const id   = editId || 'p_'+Date.now();
   const prev = people[id] || {};
+  // Photo: prefer uploaded base64, then URL field, then keep existing
+  const photoUrl = document.getElementById('f-photo').value.trim();
+  const finalPhoto = photoBase64 || photoUrl || prev.photo || '';
   const data = {
     name,
     gender:   document.getElementById('f-gender').value,
     relation: document.getElementById('f-rel').value.trim(),
     birth:    parseInt(document.getElementById('f-birth').value)||'',
-    photo:    document.getElementById('f-photo').value.trim(),
+    photo:    finalPhoto,
     notes:    document.getElementById('f-notes').value.trim(),
     x: prev.x ?? (250+Math.random()*700),
     y: prev.y ?? (200+Math.random()*500),
