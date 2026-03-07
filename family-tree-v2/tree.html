@@ -257,6 +257,65 @@ html,body{height:100%;overflow:hidden;font-family:'Lato',sans-serif;background:v
 .ubadge{font-size:.65rem;padding:2px 7px;border-radius:10px;background:rgba(167,139,250,.15);color:var(--accent);}
 
 scrollbar-width:thin;scrollbar-color:var(--border) var(--bg);
+
+/* ══ MOBILE ══════════════════════════════════════════ */
+@media (max-width: 640px) {
+  #topbar { padding: 0 12px; gap: 6px; height: 50px; }
+  #topbar h1 { font-size: .95rem; flex:1; }
+  .tb-sep { display: none !important; }
+  #btn-add,#btn-child,#btn-couple,#btn-del,
+  #btn-logout,#user-badge,#admin-badge,
+  #tb-spacer { display: none !important; }
+  #wrap { top: 50px; bottom: 62px; }
+  #wrap::before { inset: 50px 0 62px; }
+  .pcard { width: 128px; padding: 10px 9px 8px; border-radius: 12px; }
+  .av { width: 44px; height: 44px; font-size: 1.05rem; }
+  .cname { font-size: .73rem; }
+  .crel,.cyear { font-size: .59rem; }
+  .cbtn { padding: 5px 9px; font-size: .66rem; min-height: 28px; }
+  #legend { display: none; }
+  #zoom-bar { bottom: 72px; right: 12px; }
+  .zbtn { width: 42px; height: 42px; font-size: 1.1rem; }
+  .mbox { max-width: calc(100% - 20px); margin: 0 10px; padding: 20px 16px; border-radius: 16px; max-height: 88vh; }
+  #mode-banner { font-size: .62rem; padding: 4px 14px; top: 58px; white-space: normal; text-align:center; max-width:90%; }
+  #users-panel .mbox { max-width: calc(100% - 20px); }
+}
+
+/* ── BOTTOM NAV (shown only on mobile) ── */
+#bottom-nav {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0; height: 62px;
+  background: linear-gradient(180deg, #110e20f8, #0a0814f8);
+  border-top: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  z-index: 200;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 4px;
+}
+.nb-btn {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 2px; padding: 6px 8px; border-radius: 10px;
+  background: none; border: none; color: var(--muted);
+  font-family: 'Lato', sans-serif; font-size: .58rem;
+  cursor: pointer; transition: color .15s, background .15s;
+  min-width: 50px; -webkit-tap-highlight-color: transparent;
+}
+.nb-btn .nb-icon { font-size: 1.25rem; line-height: 1; }
+.nb-btn:active { background: rgba(255,255,255,.06); }
+.nb-btn.active { color: var(--accent); background: rgba(167,139,250,.12); }
+.nb-btn.pink-nb.active { color: var(--couple-clr); background: rgba(244,114,182,.1); }
+.nb-btn.red-nb.active  { color: #f87171; background: rgba(248,113,113,.1); }
+#btn-logout-mobile {
+  display: none; background: none; border: none;
+  color: var(--muted); font-size: 1.1rem; cursor: pointer;
+  padding: 6px 8px; -webkit-tap-highlight-color: transparent;
+}
+@media (max-width: 640px) {
+  #bottom-nav { display: flex; }
+  #btn-logout-mobile { display: block; }
+}
+
 </style>
 </head>
 <body>
@@ -282,6 +341,32 @@ scrollbar-width:thin;scrollbar-color:var(--border) var(--bg);
   <span id="user-badge">—</span>
   <button class="tb-btn red" id="btn-logout" onclick="doLogout()" style="display:none">Logout</button>
 </div>
+
+<!-- MOBILE LOGOUT (in topbar) -->
+<button id="btn-logout-mobile" onclick="doLogout()" title="Logout">🚪</button>
+
+<!-- BOTTOM NAV (mobile) -->
+<div id="bottom-nav">
+  <button class="nb-btn admin-only" id="nb-add" onclick="openAdd()">
+    <span class="nb-icon">＋</span>Add
+  </button>
+  <button class="nb-btn admin-only" id="nb-child" onclick="mobileMode('child')">
+    <span class="nb-icon">🔗</span>Child
+  </button>
+  <button class="nb-btn admin-only pink-nb" id="nb-couple" onclick="mobileMode('couple')">
+    <span class="nb-icon">💑</span>Couple
+  </button>
+  <button class="nb-btn admin-only red-nb" id="nb-del" onclick="mobileMode('dellink')">
+    <span class="nb-icon">✂️</span>Unlink
+  </button>
+  <button class="nb-btn" onclick="resetView()">
+    <span class="nb-icon">⊙</span>Reset
+  </button>
+  <button class="nb-btn" onclick="doLogout()">
+    <span class="nb-icon">🚪</span>Logout
+  </button>
+</div>
+
 
 <!-- MODE BANNER -->
 <div id="mode-banner"></div>
@@ -914,6 +999,114 @@ window.createUser = async () => {
     showToast('❌ '+e.message);
   }
 };
+
+
+// ── TOUCH / MOBILE ─────────────────────────────────
+window.mobileMode = type => {
+  // toggle off if already active
+  if (mode === type) { endMode(); return; }
+  startMode(type);
+  // highlight bottom nav button
+  document.querySelectorAll('.nb-btn').forEach(b => b.classList.remove('active'));
+  const map = {child:'nb-child',couple:'nb-couple',dellink:'nb-del'};
+  document.getElementById(map[type])?.classList.add('active');
+};
+
+// override endMode to also clear bottom nav highlights
+const _origEndMode = endMode;
+// patch: after endMode clears mode, also clear nb highlights
+const _patchedEnd = () => {
+  endMode();
+  document.querySelectorAll('.nb-btn').forEach(b => b.classList.remove('active'));
+};
+document.addEventListener('keydown', e => { if(e.key==='Escape') _patchedEnd(); }, true);
+
+// ── TOUCH PAN & PINCH ZOOM ─────────────────────────
+let touches = {};
+let lastPinchDist = null;
+let touchPanStart = null;
+
+wrap.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+    // check if touch is on a card
+    const el = document.elementFromPoint(t.clientX, t.clientY);
+    if (el && el.closest('.pcard')) return; // card handles its own touch
+    touchPanStart = { mx: t.clientX, my: t.clientY, px: panX, py: panY };
+    lastPinchDist = null;
+  } else if (e.touches.length === 2) {
+    touchPanStart = null;
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    lastPinchDist = Math.hypot(dx, dy);
+  }
+}, { passive: true });
+
+wrap.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (e.touches.length === 1 && touchPanStart && !mode) {
+    const t = e.touches[0];
+    panX = touchPanStart.px + (t.clientX - touchPanStart.mx);
+    panY = touchPanStart.py + (t.clientY - touchPanStart.my);
+    applyT();
+  } else if (e.touches.length === 2 && lastPinchDist) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const dist = Math.hypot(dx, dy);
+    const factor = dist / lastPinchDist;
+    scale = Math.min(3, Math.max(0.18, scale * factor));
+    lastPinchDist = dist;
+    applyT();
+  }
+}, { passive: false });
+
+wrap.addEventListener('touchend', e => {
+  if (e.touches.length === 0) { touchPanStart = null; lastPinchDist = null; }
+}, { passive: true });
+
+// ── TOUCH DRAG FOR CARDS ───────────────────────────
+document.addEventListener('touchstart', e => {
+  const card = e.target.closest('.pcard');
+  if (!card || mode) return;
+  if (e.touches.length !== 1) return;
+  const t = e.touches[0];
+  const id = card.id.replace('card-', '');
+  dragging = { id, card };
+  moved = false;
+  dragOff = {
+    mx: t.clientX, my: t.clientY,
+    cx: parseFloat(card.style.left) || 0,
+    cy: parseFloat(card.style.top)  || 0,
+  };
+}, { passive: true });
+
+document.addEventListener('touchmove', e => {
+  if (!dragging || e.touches.length !== 1) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  const dx = (t.clientX - dragOff.mx) / scale;
+  const dy = (t.clientY - dragOff.my) / scale;
+  if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
+  if (!moved) return;
+  const nx = dragOff.cx + dx, ny = dragOff.cy + dy;
+  dragging.card.style.left = nx + 'px';
+  dragging.card.style.top  = ny + 'px';
+  people[dragging.id].x = nx;
+  people[dragging.id].y = ny;
+  renderLines();
+}, { passive: false });
+
+document.addEventListener('touchend', e => {
+  if (!dragging) return;
+  if (moved) {
+    updatePos(dragging.id, people[dragging.id].x, people[dragging.id].y);
+  } else {
+    // tap = card click (for connect mode)
+    onCardClick({ stopPropagation: ()=>{} }, dragging.id);
+  }
+  dragging = null;
+  setTimeout(() => { moved = false; }, 60);
+}, { passive: true });
 
 // ── TOAST ──────────────────────────────────────────
 window.showToast = msg => {
